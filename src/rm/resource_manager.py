@@ -89,12 +89,13 @@ class ResourceManager:
         file_desc = module.DESCRIPTOR
         print(f"✅ Loaded Proto File: {file_desc.name}")
         for msg_name, msg_desc in file_desc.message_types_by_name.items():
-            print(f"\n📌 Message: {msg_name}")
+            print(f"📌 Message: {msg_name}")
             for field in msg_desc.fields:
                 print(f"  • Field: {field.name:<10} "
                     f"type={field.type} "
                     f"is_repeated={field.is_repeated} "
                     f"number={field.number}")
+        print("")
                 
     def ToFile(self, filename):
         with open(filename, "wb") as f:
