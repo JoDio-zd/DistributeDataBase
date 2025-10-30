@@ -1,0 +1,10 @@
+syntax = "proto3";
+package customerdb;
+
+message CustomerRecord {
+  string custName = 1;
+}
+
+message CustomerTable {
+  map<int32, CustomerRecord> records = 1;
+}

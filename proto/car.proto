@@ -1,0 +1,13 @@
+syntax = "proto3";
+package cardb;
+
+message CarRecord {
+  string location = 1;
+  double price = 2;
+  int32 numCars = 3;
+  int32 numAvail = 4;
+}
+
+message CarTable {
+  map<int32, CarRecord> records = 1;
+}

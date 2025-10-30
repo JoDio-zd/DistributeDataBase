@@ -1,0 +1,13 @@
+syntax = "proto3";
+package flightdb;
+
+message FlightRecord {
+  string flightNum = 1;
+  double price = 2;
+  int32 numSeats = 3;
+  int32 numAvail = 4;
+}
+
+message FlightTable {
+  map<int32, FlightRecord> records = 1;
+}

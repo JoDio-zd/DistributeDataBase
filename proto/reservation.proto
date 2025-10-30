@@ -1,0 +1,12 @@
+syntax = "proto3";
+package reservationdb;
+
+message ReservationRecord {
+  string custName = 1;
+  string resvType = 2; // flight/hotel/car
+  string resvKey = 3;
+}
+
+message ReservationTable {
+  map<int32, ReservationRecord> records = 1;
+}

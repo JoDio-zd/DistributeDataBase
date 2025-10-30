@@ -1,0 +1,13 @@
+syntax = "proto3";
+package hoteldb;
+
+message HotelRecord {
+  string location = 1;
+  double price = 2;
+  int32 numRooms = 3;
+  int32 numAvail = 4;
+}
+
+message HotelTable {
+  map<int32, HotelRecord> records = 1;
+}
