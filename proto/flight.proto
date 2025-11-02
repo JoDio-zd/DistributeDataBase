@@ -9,5 +9,5 @@ message FlightRecord {
 }
 
 message FlightTable {
-  map<int32, FlightRecord> records = 1;
+  map<string, FlightRecord> records = 1;
 }
