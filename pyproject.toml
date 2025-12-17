@@ -1,0 +1,10 @@
+[project]
+name = "distributed-database-system"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mysql>=0.0.3",
+    "pymysql>=1.1.2",
+]
