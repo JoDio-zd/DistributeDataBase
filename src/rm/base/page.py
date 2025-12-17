@@ -6,6 +6,7 @@ Record = dict
 class Page:
     page_id: int
     records: Dict[str, Record] = field(default_factory=dict)
+    last_commit_xid: int = 0
 
     def get(self, key: str):
         return self.records.get(key)

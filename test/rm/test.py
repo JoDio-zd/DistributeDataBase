@@ -17,27 +17,25 @@ def test_rm_init():
         key_column="flightNum",
         page_size=2,
     )
-    print("finding record 1")
     res = rm.read(1, "1")
-    if res is None:
-        print("Record not found.")
-    print("finding record 2")
     res = rm.read(1, "2")
-    if res is None:
-        print("Record not found.")
-    print("finding record 8")
     res = rm.read(1, "8")
-    if res is None:
-        print("Record not found.")
-    print("finding record 7")
     res = rm.read(1, "7")
-    if res is None:
-        print("Record not found.")
-    print("finding record 1020")
     res = rm.read(1, "22hs")
+    res = rm.upsert(1, {
+        "flightNum": "1234",
+        "price": 300,
+        "numSeats": 150,
+        "numAvail": 120
+    })
+    res = rm.read(2, "1234")
     if res is None:
-        print("Record not found.")
-
+        print("Record not found")
+    res = rm.read(1, "1234")
+    if res is None:
+        print("Record not found")
+    res = rm.delete(1, "1234")
+    res = rm.commit(1)
 
 if __name__ == "__main__":
     test_rm_init()

@@ -77,6 +77,8 @@ class ResourceManager:
 
         self.committed_pool = CommittedPagePool()
         self.shadow_pool = SimpleShadowPagePool()
+        self.global_last_commit_xid = 0
+        self.txn_start_xid = {}
 
     # =========================================================
     # Internal helper methods
@@ -99,7 +101,7 @@ class ResourceManager:
         """
         ...
 
-    def _get_page(self, xid: int, page_id: int, for_write: bool):
+    def _get_page(self, xid: int, page_id, for_write: bool):
         """
         Core page access logic implementing read and write semantics.
 
@@ -116,7 +118,7 @@ class ResourceManager:
             xid (int):
                 Transaction identifier.
 
-            page_id (int):
+            page_id:
                 Logical page identifier.
 
             for_write (bool):
@@ -126,7 +128,35 @@ class ResourceManager:
             Page:
                 The page instance visible to this transaction.
         """
-        ...
+        self.txn_start_xid.setdefault(xid, self.global_last_commit_xid)
+        if not for_write:
+            if self.shadow_pool.has_page(xid, page_id):
+                print("Read from shadow page.")
+                return self.shadow_pool.get_page(xid, page_id)
+
+            page = self.committed_pool.get_page(page_id)
+            if page is not None:
+                print("Committed page found in pool.")
+                return page
+
+            page = self.page_io.page_in(page_id)
+            self.committed_pool.put_page(page_id, page)
+            print("Committed page loaded from DB.")
+            return page
+        else:
+            if self.shadow_pool.has_page(xid, page_id):
+                print("Shadow page found for txn.")
+                return self.shadow_pool.get_page(xid, page_id)
+
+            page = self.committed_pool.get_page(page_id)
+            if page is None:
+                page = self.page_io.page_in(page_id)
+                self.committed_pool.put_page(page_id, page)
+                print("Committed page loaded from DB for shadow.")
+
+            self.shadow_pool.put_page(xid, page_id, page)
+            print("Shadow page created for txn.")
+            return self.shadow_pool.get_page(xid, page_id)
 
     # =========================================================
     # Data operations (used by WC / business logic)
@@ -152,16 +182,8 @@ class ResourceManager:
         """
         key = key.zfill(self.key_width)
         page_id = self.page_index.record_to_page(key)
-        page = self.committed_pool.get_page(page_id)
-        if page is not None:
-            print( "Committed page found in pool." )
-            return page.get(key)
-        else:
-            print( "Committed page NOT found in pool. Paging in..." )
-            page = self.page_io.page_in(page_id)
-            # import pdb; pdb.set_trace()
-            self.committed_pool.put_page(page_id, page)
-            return page.get(key)
+        page = self._get_page(xid, page_id, for_write=False)
+        return page.get(key)
 
 
     def upsert(self, xid: int, record: dict) -> None:
@@ -179,7 +201,10 @@ class ResourceManager:
                 Record data to insert or update.
                 Must contain the primary key field.
         """
-        ...
+        key = record[self.key_field].zfill(self.key_width)
+        page_id = self.page_index.record_to_page(key)
+        page = self._get_page(xid, page_id, for_write=True)
+        page.put(key, record)
 
     def delete(self, xid: int, key) -> None:
         """
@@ -195,7 +220,10 @@ class ResourceManager:
             key:
                 Primary key value of the record to delete.
         """
-        ...
+        key = key.zfill(self.key_width)
+        page_id = self.page_index.record_to_page(key)
+        page = self._get_page(xid, page_id, for_write=True)
+        page.delete(key)
 
     # =========================================================
     # Transaction control (used by TM)
@@ -237,7 +265,27 @@ class ResourceManager:
             xid (int):
                 Transaction identifier.
         """
-        ...
+        shadow_pages = self.shadow_pool.get_page_xids(xid)
+        if not shadow_pages:
+            return True
+
+        start_xid = self.txn_start_xid[xid]
+        for page_id, shadow in shadow_pages.items():
+            committed = self.committed_pool.get_page(page_id)
+            if committed and committed.last_commit_xid > start_xid:
+                self.shadow_pool.remove_txn(xid)
+                self.txn_start_xid.pop(xid, None)
+                return False
+
+        for page_id, shadow in shadow_pages.items():
+            shadow.last_commit_xid = xid
+            self.committed_pool.put_page(page_id, shadow)
+            self.page_io.page_out(shadow)
+        
+        self.global_last_commit_xid += 1
+        self.shadow_pool.remove_txn(xid)
+        self.txn_start_xid.pop(xid, None)
+        return True
 
     def abort(self, xid: int) -> None:
         """
