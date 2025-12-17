@@ -1,10 +1,18 @@
 [project]
 name = "distributed-database-system"
 version = "0.1.0"
-description = "Add your description here"
+description = "Distributed Database System with Workflow Controller (WC), Transaction Manager (TM), and Resource Managers (RM)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    # Database drivers
     "mysql>=0.0.3",
     "pymysql>=1.1.2",
+    # WC dependencies
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
 ]
