@@ -55,33 +55,57 @@ class ResourceManager:
                 self.committed_pool.put_page(page_id, page)
                 print("Committed page loaded from DB.")
             record = page.get(key)
+        
         if for_write:
-            if shadow is None:
-                self.shadow_pool.put_record(xid, key, record or {})
+            if shadow is None and record is not None:
+                self.shadow_pool.put_record(xid, key, record)
+                record = self.shadow_pool.get_record(xid, key)
                 print("Shadow record created for txn.")
-        if xid not in self.txn_start_xid:
-            self.txn_start_xid[xid] = {}
-            self.txn_start_xid[xid][key] = record.version
-        elif xid in self.txn_start_xid and key not in self.txn_start_xid[xid]:
-            self.txn_start_xid[xid][key] = record.version
         return record
+    
+    def _get_start_version(self, xid: int, key: str):
+        if xid in self.txn_start_xid and key in self.txn_start_xid[xid]:
+            return self.txn_start_xid[xid][key]
+        return None
 
     def read(self, xid: int, key):
         key = key.zfill(self.key_width)
         record = self._get_record(xid, key, for_write=False)
+        if record is None or record.deleted:
+            return None
         return record
 
-    def upsert(self, xid: int, record: dict) -> None:
+    def insert(self, xid: int, record: dict) -> None:
         # For Insert operation, we assume the record contains the key field.
         key = record[self.key_field].zfill(self.key_width)
+        record_existed = self._get_record(xid, key, for_write=True)
+        if record_existed is not None and not record_existed.deleted:
+            raise KeyError(f"Record with key {key} existed for insert.")
         record = Record(record, version=xid)
         self.shadow_pool.put_record(xid, key, record)
 
     def delete(self, xid: int, key) -> None:
         key = key.zfill(self.key_width)
         record = self._get_record(xid, key, for_write=True)
+        if record is None or record.deleted:
+            return None
         record.deleted = True
         record.version = xid
+
+    def update(self, xid: int, key: str, updates: dict) -> None:
+        key = key.zfill(self.key_width)
+        record = self._get_record(xid, key, for_write=True)
+        if record is None or record.deleted:
+            raise KeyError(f"Record with key {key} does not exist for update.")
+        if xid not in self.txn_start_xid:
+            self.txn_start_xid[xid] = {}
+            self.txn_start_xid[xid][key] = record.version
+        else:
+            if key not in self.txn_start_xid[xid]:
+                self.txn_start_xid[xid][key] = record.version
+        for field, value in updates.items():
+            record.data[field] = value
+        
 
     # =========================================================
     # Transaction control (used by TM)
@@ -94,16 +118,30 @@ class ResourceManager:
             if not self.locker.try_lock(key, xid):
                 self.locker.unlock_all(xid)
                 return False
-        for key in keys:
+            
+        for key, record in shadow.items():
             page_id = self.page_index.record_to_page(key)
-            current_version = self.committed_pool.get_record_version(page_id, key)
-            if key not in self.txn_start_xid[xid]:
+            page = self.committed_pool.get_page(page_id)
+            assert page is not None, "Committed page must be loaded before prepare."
+            committed_record = page.get(key)
+            start_version = self._get_start_version(xid, key)
+
+            # -------- INSERT --------
+            if start_version is None:
+                if committed_record is not None and not committed_record.deleted:
+                    self.locker.unlock_all(xid)
+                    return False
                 continue
-            start_version = self.txn_start_xid[xid][key]
-            if current_version is None:
-                self.locker.unlock_all(xid)
-                return False
-            if current_version != start_version:
+
+            # -------- UPDATE / DELETE --------
+            if committed_record is None or committed_record.deleted:
+                if not record.deleted:
+                    self.locker.unlock_all(xid)
+                    return False
+                continue
+
+            # version 校验
+            if committed_record.version != start_version:
                 self.locker.unlock_all(xid)
                 return False
         return True
@@ -124,6 +162,8 @@ class ResourceManager:
                 page.put(key, record)
             self.page_io.page_out(page)
         self.locker.unlock_all(xid)
+        self.shadow_pool.discard(xid)
+        self.txn_start_xid.pop(xid, None)
         return True
 
     def abort(self, xid: int) -> None:
@@ -139,4 +179,6 @@ class ResourceManager:
             xid (int):
                 Transaction identifier.
         """
-        ...
+        self.shadow_pool.remove_txn(xid)
+        self.txn_start_xid.pop(xid, None)
+        self.locker.unlock_all(xid)
