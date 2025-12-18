@@ -162,7 +162,7 @@ class ResourceManager:
                 page.put(key, record)
             self.page_io.page_out(page)
         self.locker.unlock_all(xid)
-        self.shadow_pool.discard(xid)
+        self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)
         return True
 
