@@ -19,3 +19,12 @@ class CommittedPagePool(PagePool):
 
     def clear(self) -> None:
         self._pages.clear()
+    
+    def get_record_version(self, page_id, key: str) -> int:
+        page = self.get_page(page_id)
+        if page is None:
+            return None
+        record = page.get(key)
+        if record is None:
+            return None
+        return record.version

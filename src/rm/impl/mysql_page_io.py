@@ -1,7 +1,8 @@
 import pymysql
 from typing import Tuple
-from src.rm.base.page_io import PageIO, Page
+from src.rm.base.page_io import PageIO
 from src.rm.base.page_index import PageIndex
+from src.rm.base.page import Page, Record
 
 class MySQLPageIO(PageIO):
     def __init__(
@@ -34,7 +35,7 @@ class MySQLPageIO(PageIO):
         cursor = self.conn.cursor()
         cursor.execute(sql, (start, end))
         rows = cursor.fetchall()
-        records = {row[self.key_column]: row for row in rows}
+        records = {row[self.key_column]: Record(row) for row in rows}
         return Page(page_id=page_id, records=records)
 
     def page_out(self, page: Page) -> None:
