@@ -1,6 +1,11 @@
 from typing import List, Any, Dict, Iterable
 from dataclasses import field, dataclass
-Record = dict
+
+class Record(dict):
+    def __init__(self, data, version=0):
+        super().__init__(data)
+        self.version = version
+        self.deleted = False
 
 @dataclass
 class Page:
