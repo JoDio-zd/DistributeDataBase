@@ -52,7 +52,7 @@ def enlist(req):
 def read_record(key: str, xid: int):
     res = rm.read(xid, key)
     record = handle_rm_result(res)
-    return {"record": record.data}
+    return {"record": record}
 
 
 @app.post("/records")
