@@ -1,7 +1,7 @@
 # src/rms/flight_rm_service.py
 from fastapi import FastAPI, HTTPException
 from src.rm.resource_manager import ResourceManager
-from src.rm.models.models import InsertRequest, UpdateRequest, TxnRequest
+from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
 import pymysql
 import os
 import requests
