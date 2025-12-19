@@ -5,6 +5,13 @@ from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
 import pymysql
 import os
 import requests
+from src.rms.base.err_handle import handle_rm_result
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 # port = 8001
 app = FastAPI(title="Flight RM Service")
@@ -43,36 +50,32 @@ def enlist(req):
 
 @app.get("/records/{key}")
 def read_record(key: str, xid: int):
-    record = rm.read(xid, key)
-    if record is None:
-        return {"record": None}
-    return {"record": dict(record)}
+    res = rm.read(xid, key)
+    record = handle_rm_result(res)
+    return {"record": record.data}
 
 
 @app.post("/records")
 def insert_record(req: InsertRequest):
-    try:
-        rm.insert(req.xid, req.record)
-        enlist(req)
-        return {"ok": True}
-    except KeyError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    res = rm.insert(req.xid, req.record)
+    handle_rm_result(res)
+    enlist(req)
+    return {"ok": True}
 
 
 @app.put("/records/{key}")
 def update_record(key: str, req: UpdateRequest):
-    try:
-        rm.update(req.xid, key, req.updates)
-        enlist(req)
-        return {"ok": True}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    res = rm.update(req.xid, key, req.updates)
+    handle_rm_result(res)
+    enlist(req)
+    return {"ok": True}
 
 
 @app.delete("/records/{key}")
 def delete_record(key: str, xid: int):
-    rm.delete(xid, key)
-    enlist(UpdateRequest(xid=xid, updates={}))
+    res = rm.delete(xid, key)
+    handle_rm_result(res)
+    enlist(TxnRequest(xid=xid))
     return {"ok": True}
 
 # -----------------------------
@@ -81,19 +84,26 @@ def delete_record(key: str, xid: int):
 
 @app.post("/txn/prepare")
 def prepare_txn(req: TxnRequest):
-    ok = rm.prepare(req.xid)
-    return {"ok": ok}
+    res = rm.prepare(req.xid)
+    if not res.ok:
+        return {
+            "ok": False,
+            "error": res.err.name,
+        }
+    return {"ok": True}
 
 
 @app.post("/txn/commit")
 def commit_txn(req: TxnRequest):
-    rm.commit(req.xid)
+    res = rm.commit(req.xid)
+    handle_rm_result(res)
     return {"ok": True}
 
 
 @app.post("/txn/abort")
 def abort_txn(req: TxnRequest):
-    rm.abort(req.xid)
+    res = rm.abort(req.xid)
+    handle_rm_result(res)
     return {"ok": True}
 
 # -----------------------------

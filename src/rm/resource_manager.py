@@ -4,6 +4,11 @@ from src.rm.impl.simple_shadow_record_pool import SimpleShadowRecordPool
 from src.rm.impl.order_string_page_index import OrderedStringPageIndex
 from src.rm.base.page import Record
 from src.rm.impl.lock_manager import RowLockManager
+from src.rm.base.err_code import RMResult, ErrCode
+import logging
+
+logger = logging.getLogger("rm")
+
 
 class ResourceManager:
 
@@ -36,6 +41,10 @@ class ResourceManager:
         self.global_last_commit_xid = 0
         self.txn_start_xid: dict[int, dict[str, int]] = {}
         self.locker = RowLockManager()
+        logger.info(
+            "ResourceManager initialized: table=%s, key=%s, page_size=%d, key_width=%d",
+            table, key_column, page_size, key_width
+        )
 
     # =========================================================
     # Internal helper methods
@@ -43,24 +52,31 @@ class ResourceManager:
 
     def _get_record(self, xid: int, key: str, for_write: bool):
         page_id = self.page_index.record_to_page(key)
+        logger.debug(
+            "RM.get_record: xid=%s key=%s page=%s for_write=%s",
+            xid, key, page_id, for_write
+        )
         shadow = self.shadow_pool.get_record(xid, key)
         record = None
         if shadow is not None:
-            print("Read from shadow record.")
+            logger.debug("RM.get_record: hit shadow xid=%s key=%s", xid, key)
             record = shadow
         else:
             page = self.committed_pool.get_page(page_id)
             if page is None:
+                logger.debug("RM.get_record: page_in page=%s for xid=%s", page_id, xid)
                 page = self.page_io.page_in(page_id)
                 self.committed_pool.put_page(page_id, page)
-                print("Committed page loaded from DB.")
             record = page.get(key)
         
         if for_write:
             if shadow is None and record is not None:
+                logger.debug(
+                    "RM.get_record: create shadow record xid=%s key=%s version=%s",
+                    xid, key, record.version
+                )
                 self.shadow_pool.put_record(xid, key, record)
                 record = self.shadow_pool.get_record(xid, key)
-                print("Shadow record created for txn.")
         return record
     
     def _get_start_version(self, xid: int, key: str):
@@ -72,31 +88,48 @@ class ResourceManager:
         key = key.zfill(self.key_width)
         record = self._get_record(xid, key, for_write=False)
         if record is None or record.deleted:
-            return None
-        return record
+            return RMResult(ok=False, err=ErrCode.KEY_NOT_FOUND)
+        return RMResult(ok=True, value=record)
 
     def insert(self, xid: int, record: dict) -> None:
         # For Insert operation, we assume the record contains the key field.
         key = record[self.key_field].zfill(self.key_width)
+        logger.info("RM.insert: xid=%s key=%s", xid, key)
         record_existed = self._get_record(xid, key, for_write=True)
         if record_existed is not None and not record_existed.deleted:
-            raise KeyError(f"Record with key {key} existed for insert.")
+            logger.warning(
+                "RM.insert conflict: xid=%s key=%s already exists",
+                xid, key
+            )
+            return RMResult(ok=False, err=ErrCode.KEY_EXISTS)
         record = Record(record, version=xid)
         self.shadow_pool.put_record(xid, key, record)
-
+        logger.info(
+            "RM.insert success: xid=%s key=%s version=%s",
+            xid, key, xid
+        )
+        return RMResult(ok=True, value=record)
+    
     def delete(self, xid: int, key) -> None:
         key = key.zfill(self.key_width)
+        logger.info("RM.delete: xid=%s key=%s", xid, key)
         record = self._get_record(xid, key, for_write=True)
         if record is None or record.deleted:
-            return None
+            return RMResult(ok=False, err=ErrCode.KEY_NOT_FOUND)
         record.deleted = True
         record.version = xid
+        return RMResult(ok=True, value=record)
 
     def update(self, xid: int, key: str, updates: dict) -> None:
         key = key.zfill(self.key_width)
+        logger.info("RM.update: xid=%s key=%s updates=%s", xid, key, list(updates.keys()))
         record = self._get_record(xid, key, for_write=True)
         if record is None or record.deleted:
-            raise KeyError(f"Record with key {key} does not exist for update.")
+            logger.warning(
+                "RM.update not found: xid=%s key=%s",
+                xid, key
+            )
+            return RMResult(ok=False, err=ErrCode.KEY_NOT_FOUND)
         if xid not in self.txn_start_xid:
             self.txn_start_xid[xid] = {}
             self.txn_start_xid[xid][key] = record.version
@@ -105,6 +138,12 @@ class ResourceManager:
                 self.txn_start_xid[xid][key] = record.version
         for field, value in updates.items():
             record.data[field] = value
+        record.version = xid
+        logger.info(
+            "RM.update success: xid=%s key=%s start_version=%s",
+            xid, key, self._get_start_version(xid, key)
+        )
+        return RMResult(ok=True, value=record)
         
 
     # =========================================================
@@ -113,16 +152,26 @@ class ResourceManager:
 
     def prepare(self, xid: int) -> bool:
         shadow = self.shadow_pool.get_records(xid)
+        logger.info("RM.prepare start: xid=%s", xid)
         keys = sorted(k.zfill(self.key_width) for k in shadow.keys())
         for key in keys:
             if not self.locker.try_lock(key, xid):
                 self.locker.unlock_all(xid)
-                return False
+                logger.warning(
+                    "RM.prepare lock conflict: xid=%s key=%s",
+                    xid, key
+                )
+                return RMResult(ok=False, err=ErrCode.LOCK_CONFLICT)
             
         for key, record in shadow.items():
             page_id = self.page_index.record_to_page(key)
             page = self.committed_pool.get_page(page_id)
-            assert page is not None, "Committed page must be loaded before prepare."
+            if page is None:
+                logger.error(
+                    "RM.prepare invariant violation: xid=%s page=%s not loaded",
+                    xid, page_id
+                )
+                return RMResult(ok=False, err=ErrCode.INTERNAL_INVARIANT)
             committed_record = page.get(key)
             start_version = self._get_start_version(xid, key)
 
@@ -130,29 +179,53 @@ class ResourceManager:
             if start_version is None:
                 if committed_record is not None and not committed_record.deleted:
                     self.locker.unlock_all(xid)
-                    return False
+                    logger.warning(
+                        "RM.prepare semantic conflict: xid=%s key=%s err=%s",
+                        xid, key, ErrCode.KEY_EXISTS.name
+                    )
+                    return RMResult(ok=False, err=ErrCode.KEY_EXISTS)
                 continue
 
             # -------- UPDATE / DELETE --------
             if committed_record is None or committed_record.deleted:
                 if not record.deleted:
                     self.locker.unlock_all(xid)
-                    return False
+                    logger.warning(
+                        "RM.prepare semantic conflict: xid=%s key=%s err=%s",
+                        xid, key, ErrCode.KEY_EXISTS.name
+                    )
+                    return RMResult(ok=False, err=ErrCode.KEY_NOT_FOUND)
                 continue
 
             # version 校验
             if committed_record.version != start_version:
                 self.locker.unlock_all(xid)
-                return False
-        return True
+                logger.warning(
+                    "RM.prepare version conflict: xid=%s key=%s committed=%s start=%s",
+                    xid, key, committed_record.version, start_version
+                )
+                return RMResult(ok=False, err=ErrCode.VERSION_CONFLICT)
+        logger.info(
+            "RM.prepare success: xid=%s keys=%s",
+            xid, list(shadow.keys())
+        )
+        return RMResult(ok=True, value=None)
 
     def commit(self, xid: int) -> None:
         shadow = self.shadow_pool.get_records(xid)
+        logger.info(
+            "RM.commit start: xid=%s records=%d",
+            xid, len(shadow)
+        )
         keys = sorted(k.zfill(self.key_width) for k in shadow.keys())
         for key in keys:
             page_id = self.page_index.record_to_page(key)
             record = shadow[key]
             page = self.committed_pool.get_page(page_id)
+            logger.debug(
+                "RM.commit apply: xid=%s key=%s deleted=%s",
+                xid, key, record.deleted
+            )
             if page is None:
                 page = self.page_io.page_in(page_id)
                 self.committed_pool.put_page(page_id, page)
@@ -164,7 +237,8 @@ class ResourceManager:
         self.locker.unlock_all(xid)
         self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)
-        return True
+        logger.info("RM.commit done: xid=%s", xid)
+        return RMResult(ok=True, value=None)
 
     def abort(self, xid: int) -> None:
         """
@@ -182,3 +256,6 @@ class ResourceManager:
         self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)
         self.locker.unlock_all(xid)
+        logger.info("RM.abort: xid=%s", xid)
+
+        return RMResult(ok=True, value=None)

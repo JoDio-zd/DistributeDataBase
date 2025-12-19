@@ -1,4 +1,4 @@
-from src.rm.base.page_io import Page
+from src.rm.base.page import Page
 from src.rm.base.page_pool import PagePool
 
 class CommittedPagePool(PagePool):
