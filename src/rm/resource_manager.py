@@ -81,7 +81,14 @@ class ResourceManager:
     
     def _get_start_version(self, xid: int, key: str):
         if xid in self.txn_start_xid and key in self.txn_start_xid[xid]:
+            logger.debug(
+                "RM.get_start_version: xid=%s key=%s start_version=%s",
+                xid, key, self.txn_start_xid[xid][key]
+            )
             return self.txn_start_xid[xid][key]
+        logger.debug(
+            "RM.get_start_version: xid=%s key=%s start_version=None", xid, key
+        )
         return None
 
     def read(self, xid: int, key):
@@ -94,6 +101,7 @@ class ResourceManager:
     def insert(self, xid: int, record: dict) -> None:
         # For Insert operation, we assume the record contains the key field.
         key = record[self.key_field].zfill(self.key_width)
+        record[self.key_field] = key
         logger.info("RM.insert: xid=%s key=%s", xid, key)
         record_existed = self._get_record(xid, key, for_write=True)
         if record_existed is not None and not record_existed.deleted:
@@ -112,10 +120,11 @@ class ResourceManager:
     
     def delete(self, xid: int, key) -> None:
         key = key.zfill(self.key_width)
-        logger.info("RM.delete: xid=%s key=%s", xid, key)
         record = self._get_record(xid, key, for_write=True)
+        logger.info("RM.delete: xid=%s key=%s, version=%s", xid, key, record.version if record else None)
         if record is None or record.deleted:
             return RMResult(ok=False, err=ErrCode.KEY_NOT_FOUND)
+        self.txn_start_xid.setdefault(xid, {})[key] = record.version
         record.deleted = True
         record.version = xid
         return RMResult(ok=True, value=record)
@@ -137,7 +146,7 @@ class ResourceManager:
             if key not in self.txn_start_xid[xid]:
                 self.txn_start_xid[xid][key] = record.version
         for field, value in updates.items():
-            record.data[field] = value
+            record[field] = value
         record.version = xid
         logger.info(
             "RM.update success: xid=%s key=%s start_version=%s",
@@ -223,17 +232,17 @@ class ResourceManager:
             record = shadow[key]
             page = self.committed_pool.get_page(page_id)
             logger.debug(
-                "RM.commit apply: xid=%s key=%s deleted=%s",
-                xid, key, record.deleted
+                "RM.commit apply: xid=%s key=%s deleted=%s, version=%s",
+                xid, key, record.deleted, record.version
             )
             if page is None:
                 page = self.page_io.page_in(page_id)
-                self.committed_pool.put_page(page_id, page)
             if record.deleted:
                 page.delete(key)
             else:
                 page.put(key, record)
-            self.page_io.page_out(page)
+            self.committed_pool.put_page(page_id, page)
+        self.page_io.page_out(page)
         self.locker.unlock_all(xid)
         self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)

@@ -1,5 +1,6 @@
 from typing import List, Any, Dict, Iterable
 from dataclasses import field, dataclass
+import copy
 
 class Record(dict):
     def __init__(self, data, version=0):
