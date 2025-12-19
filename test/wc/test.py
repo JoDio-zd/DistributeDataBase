@@ -165,9 +165,9 @@ def case_delete_atomicity():
 def run_all():
     cases = [
         # case_concurrent_addFlight,
-        # case_abort_visibility,
+        case_abort_visibility,
         # case_concurrent_reserve,
-        case_delete_atomicity,
+        # case_delete_atomicity,
     ]
 
     for case in cases:

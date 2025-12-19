@@ -96,6 +96,10 @@ class ResourceManager:
         record = self._get_record(xid, key, for_write=False)
         if record is None or record.deleted:
             return RMResult(ok=False, err=ErrCode.KEY_NOT_FOUND)
+        if xid not in self.txn_start_xid:
+            self.txn_start_xid[xid] = {}
+        if key not in self.txn_start_xid[xid]:
+            self.txn_start_xid[xid][key] = record.version
         return RMResult(ok=True, value=record)
 
     def insert(self, xid: int, record: dict) -> None:
@@ -227,6 +231,7 @@ class ResourceManager:
             xid, len(shadow)
         )
         keys = sorted(k.zfill(self.key_width) for k in shadow.keys())
+        pages_written = {}
         for key in keys:
             page_id = self.page_index.record_to_page(key)
             record = shadow[key]
@@ -242,7 +247,9 @@ class ResourceManager:
             else:
                 page.put(key, record)
             self.committed_pool.put_page(page_id, page)
-        self.page_io.page_out(page)
+            pages_written[page_id] = page
+        for page_id in pages_written.keys():
+            self.page_io.page_out(pages_written[page_id])
         self.locker.unlock_all(xid)
         self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)
