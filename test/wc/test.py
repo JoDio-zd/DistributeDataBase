@@ -3,7 +3,7 @@ import random
 import time
 import traceback
 
-from src.wc.workflow_controller import FlightWC   # ← 您给的那个类
+from src.wc.workflow_controller import WC   # ← 您给的那个类
 
 # =========================
 # 配置
@@ -45,7 +45,7 @@ def run_txn(wc, fn, results, start_barrier):
 # =========================
 
 def case_concurrent_addFlight():
-    wc = FlightWC()
+    wc = WC()
 
     results = []
     start = threading.Barrier(THREADS)
@@ -72,7 +72,7 @@ def case_concurrent_addFlight():
 # =========================
 
 def case_abort_visibility():
-    wc = FlightWC()
+    wc = WC()
 
     xid = wc.start()
     wc.addFlight(xid, FLIGHT, PRICE, SEATS)
@@ -90,7 +90,7 @@ def case_abort_visibility():
 # =========================
 
 def case_concurrent_reserve():
-    wc = FlightWC()
+    wc = WC()
 
     # init flight
     # xid = wc.start()
@@ -128,7 +128,7 @@ def case_concurrent_reserve():
 # =========================
 
 def case_delete_atomicity():
-    wc = FlightWC()
+    wc = WC()
 
     # init
     xid = wc.start()
@@ -179,7 +179,7 @@ def run_all():
                 traceback.print_exc()
                 return
 
-    print("✅ ALL FlightWC CONCURRENCY TESTS PASSED")
+    print("✅ ALL WC CONCURRENCY TESTS PASSED")
 
 
 if __name__ == "__main__":

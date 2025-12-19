@@ -107,7 +107,7 @@ class ResourceManager:
         key = record[self.key_field].zfill(self.key_width)
         record[self.key_field] = key
         logger.info("RM.insert: xid=%s key=%s", xid, key)
-        record_existed = self._get_record(xid, key, for_write=True)
+        record_existed = self._get_record(xid, key, for_write=False)
         if record_existed is not None and not record_existed.deleted:
             logger.warning(
                 "RM.insert conflict: xid=%s key=%s already exists",
