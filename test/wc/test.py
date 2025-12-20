@@ -3,9 +3,36 @@ Workflow Controller Test Suite
 测试 WC 层的跨服务事务、2PC 协调、不超卖等核心功能
 """
 
+import logging
 import threading
+from datetime import datetime
 from test.wc.config import TestConfig, TestKeys
 from test.wc.helpers import *
+
+# =========================================================
+# 日志配置
+# =========================================================
+
+# 创建日志目录
+import os
+log_dir = os.path.join(os.path.dirname(__file__), "../../logs")
+os.makedirs(log_dir, exist_ok=True)
+
+# 配置日志
+log_file = os.path.join(log_dir, f"wc_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler()  # 同时输出到终端，方便实时查看
+    ]
+)
+logger = logging.getLogger(__name__)
+
+logger.info("=" * 60)
+logger.info(f"WC Test Suite Started - Log file: {log_file}")
+logger.info("=" * 60)
 
 
 # =========================================================
@@ -981,90 +1008,201 @@ class TestConcurrencyDistribution:
 
 
 # =========================================================
+# 测试执行辅助函数
+# =========================================================
+
+
+def run_test(test_fn, test_name):
+    """运行单个测试并捕获错误"""
+    try:
+        logger.info(f"▶ Running: {test_name}")
+        test_fn()
+        logger.info(f"✅ PASSED: {test_name}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ FAILED: {test_name}")
+        logger.error(f"   Error: {str(e)}")
+        import traceback
+        logger.error(f"   Traceback: {traceback.format_exc()}")
+        return False
+
+
+# =========================================================
 # Main 入口
 # =========================================================
 
 
 def run_all_tests():
     """运行所有测试"""
-    print("=" * 60)
-    print("Workflow Controller Test Suite")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Workflow Controller Test Suite")
+    logger.info("=" * 60)
+
+    test_results = []
+    total_tests = 0
+    passed_tests = 0
 
     # Category 1: 唯一性约束类
-    print("\n【Category 1】Uniqueness Constraints")
-    print("-" * 60)
+    logger.info("\n【Category 1】Uniqueness Constraints")
+    logger.info("-" * 60)
     uc = TestUniquenessConstraints()
-    uc.test_concurrent_addFlight_stress()
-    uc.test_concurrent_addHotel()
-    uc.test_concurrent_addCar()
-    uc.test_concurrent_addCustomer()
+    tests_cat1 = [
+        (uc.test_concurrent_addFlight_stress, "test_concurrent_addFlight_stress"),
+        (uc.test_concurrent_addHotel, "test_concurrent_addHotel"),
+        (uc.test_concurrent_addCar, "test_concurrent_addCar"),
+        (uc.test_concurrent_addCustomer, "test_concurrent_addCustomer"),
+    ]
+    for test_fn, test_name in tests_cat1:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 2: Abort 可见性与原子性类
-    print("\n【Category 2】Abort Visibility & Atomicity")
-    print("-" * 60)
+    logger.info("\n【Category 2】Abort Visibility & Atomicity")
+    logger.info("-" * 60)
     av = TestAbortVisibility()
-    av.test_abort_visibility()
-    av.test_delete_atomicity()
-    av.test_cross_service_abort()
-    av.test_partial_operation_abort()
+    tests_cat2 = [
+        (av.test_abort_visibility, "test_abort_visibility"),
+        (av.test_delete_atomicity, "test_delete_atomicity"),
+        (av.test_cross_service_abort, "test_cross_service_abort"),
+        (av.test_partial_operation_abort, "test_partial_operation_abort"),
+    ]
+    for test_fn, test_name in tests_cat2:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 3: 不超卖类
-    print("\n【Category 3】No Oversell")
-    print("-" * 60)
+    logger.info("\n【Category 3】No Oversell")
+    logger.info("-" * 60)
     no = TestNoOversell()
-    no.test_concurrent_reserve_no_oversell()
-    no.test_reserve_customer_not_exist()
-    no.test_reserve_flight_not_exist()
-    no.test_reserve_insufficient_seats()
-    no.test_reserve_hotel_no_oversell()
-    no.test_reserve_car_no_oversell()
+    tests_cat3 = [
+        (no.test_concurrent_reserve_no_oversell, "test_concurrent_reserve_no_oversell"),
+        (no.test_reserve_customer_not_exist, "test_reserve_customer_not_exist"),
+        (no.test_reserve_flight_not_exist, "test_reserve_flight_not_exist"),
+        (no.test_reserve_insufficient_seats, "test_reserve_insufficient_seats"),
+        (no.test_reserve_hotel_no_oversell, "test_reserve_hotel_no_oversell"),
+        (no.test_reserve_car_no_oversell, "test_reserve_car_no_oversell"),
+    ]
+    for test_fn, test_name in tests_cat3:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 4: 跨服务事务类
-    print("\n【Category 4】Cross-Service Transactions")
-    print("-" * 60)
+    logger.info("\n【Category 4】Cross-Service Transactions")
+    logger.info("-" * 60)
     cs = TestCrossServiceTransactions()
-    cs.test_cross_service_commit()
-    cs.test_cross_service_complex_workflow()
-    cs.test_cross_service_one_fails()
+    tests_cat4 = [
+        (cs.test_cross_service_commit, "test_cross_service_commit"),
+        (cs.test_cross_service_complex_workflow, "test_cross_service_complex_workflow"),
+        (cs.test_cross_service_one_fails, "test_cross_service_one_fails"),
+    ]
+    for test_fn, test_name in tests_cat4:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 5: 2PC 失败场景类
-    print("\n【Category 5】2PC Failure Scenarios")
-    print("-" * 60)
+    logger.info("\n【Category 5】2PC Failure Scenarios")
+    logger.info("-" * 60)
     tpc = TestTwoPCFailures()
-    tpc.test_prepare_fails_on_one_rm()
-    tpc.test_prepare_fails_multiple_rms()
-    tpc.test_tm_enlist_idempotent()
+    tests_cat5 = [
+        (tpc.test_prepare_fails_on_one_rm, "test_prepare_fails_on_one_rm"),
+        (tpc.test_prepare_fails_multiple_rms, "test_prepare_fails_multiple_rms"),
+        (tpc.test_tm_enlist_idempotent, "test_tm_enlist_idempotent"),
+    ]
+    for test_fn, test_name in tests_cat5:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 6: TM 状态管理类
-    print("\n【Category 6】TM State Management")
-    print("-" * 60)
+    logger.info("\n【Category 6】TM State Management")
+    logger.info("-" * 60)
     tm = TestTMStateManagement()
-    tm.test_commit_nonexistent_xid()
-    tm.test_abort_nonexistent_xid()
-    tm.test_double_commit()
-    tm.test_commit_after_abort()
-    tm.test_abort_idempotent()
+    tests_cat6 = [
+        (tm.test_commit_nonexistent_xid, "test_commit_nonexistent_xid"),
+        (tm.test_abort_nonexistent_xid, "test_abort_nonexistent_xid"),
+        (tm.test_double_commit, "test_double_commit"),
+        (tm.test_commit_after_abort, "test_commit_after_abort"),
+        (tm.test_abort_idempotent, "test_abort_idempotent"),
+    ]
+    for test_fn, test_name in tests_cat6:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 7: 混合操作场景类
-    print("\n【Category 7】Mixed Operations")
-    print("-" * 60)
+    logger.info("\n【Category 7】Mixed Operations")
+    logger.info("-" * 60)
     mo = TestMixedOperations()
-    mo.test_mixed_add_delete_query()
-    mo.test_read_own_write()
-    mo.test_read_after_delete()
+    tests_cat7 = [
+        (mo.test_mixed_add_delete_query, "test_mixed_add_delete_query"),
+        (mo.test_read_own_write, "test_read_own_write"),
+        (mo.test_read_after_delete, "test_read_after_delete"),
+    ]
+    for test_fn, test_name in tests_cat7:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 8: 并发度与 key 分布类（Priority 2）
-    print("\n【Category 8】Concurrency & Key Distribution (High Intensity)")
-    print("-" * 60)
+    logger.info("\n【Category 8】Concurrency & Key Distribution (High Intensity)")
+    logger.info("-" * 60)
     cd = TestConcurrencyDistribution()
-    cd.test_hotspot_key_high_concurrency()
-    cd.test_uniform_key_low_conflict()
-    cd.test_mixed_operations_high_concurrency()
+    tests_cat8 = [
+        (cd.test_hotspot_key_high_concurrency, "test_hotspot_key_high_concurrency"),
+        (cd.test_uniform_key_low_conflict, "test_uniform_key_low_conflict"),
+        (cd.test_mixed_operations_high_concurrency, "test_mixed_operations_high_concurrency"),
+    ]
+    for test_fn, test_name in tests_cat8:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
-    print("\n" + "=" * 60)
-    print("✅✅✅ ALL WC TESTS PASSED ✅✅✅")
-    print("=" * 60)
+    # 输出测试总结
+    logger.info("\n" + "=" * 60)
+    logger.info("WC TEST SUMMARY")
+    logger.info("=" * 60)
+    logger.info(f"Total Tests: {total_tests}")
+    logger.info(f"Passed: {passed_tests}")
+    logger.info(f"Failed: {total_tests - passed_tests}")
+    logger.info(f"Success Rate: {passed_tests / total_tests * 100:.1f}%")
+    logger.info("\nDetailed Results:")
+    for test_name, status in test_results:
+        status_symbol = "✅" if status == "PASSED" else "❌"
+        logger.info(f"  {status_symbol} {test_name}: {status}")
+
+    if passed_tests == total_tests:
+        logger.info("\n✅✅✅ ALL WC TESTS PASSED ✅✅✅")
+    else:
+        logger.info(f"\n⚠️ {total_tests - passed_tests} tests failed")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":

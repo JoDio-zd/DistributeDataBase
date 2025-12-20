@@ -4,8 +4,8 @@ RM Test Helper Functions
 """
 import pymysql
 from src.rm.base.err_code import ErrCode, RMResult
-from src.rm.impl.mysql_page_io import MySQLPageIO
-from src.rm.impl.order_string_page_index import OrderedStringPageIndex
+from src.rm.impl.page_index.order_string_page_index import OrderedStringPageIndex
+from src.rm.impl.page_io.mysql_page_io import MySQLPageIO
 from src.rm.resource_manager import ResourceManager
 
 

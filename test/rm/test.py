@@ -3,9 +3,36 @@ Resource Manager Test Suite
 测试 RM 层的并发控制、冲突检测、事务隔离等核心功能
 """
 
+import logging
 import threading
 import time
+from datetime import datetime
 from test.rm.helpers import *
+
+# =========================================================
+# 日志配置
+# =========================================================
+
+# 创建日志目录
+import os
+log_dir = os.path.join(os.path.dirname(__file__), "../../logs")
+os.makedirs(log_dir, exist_ok=True)
+
+# 配置日志
+log_file = os.path.join(log_dir, f"rm_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler()  # 同时输出到终端，方便实时查看
+    ]
+)
+logger = logging.getLogger(__name__)
+
+logger.info("=" * 60)
+logger.info(f"RM Test Suite Started - Log file: {log_file}")
+logger.info("=" * 60)
 
 # =========================================================
 # 测试类别 1: WW 冲突类
@@ -23,39 +50,44 @@ class TestWWConflicts:
         【错误码】KEY_EXISTS
         【覆盖源码】src/rm/resource_manager.py:197
         """
-        conn = new_conn()
-        rm = new_rm(
-            conn, table=TestData.DEFAULT_TABLE, key_column=TestData.DEFAULT_KEY_COL
-        )
-        key = TestKeys.WW_INSERT_INSERT
+        try:
+            conn = new_conn()
+            rm = new_rm(
+                conn, table=TestData.DEFAULT_TABLE, key_column=TestData.DEFAULT_KEY_COL
+            )
+            key = TestKeys.WW_INSERT_INSERT
 
-        # 预加载 page (prepare 不变式要求)
-        preload_page_for_key(rm, 1, key)
-        preload_page_for_key(rm, 2, key)
+            # 预加载 page (prepare 不变式要求)
+            preload_page_for_key(rm, 1, key)
+            preload_page_for_key(rm, 2, key)
 
-        # T1 和 T2 都插入同一 key
-        r1 = rm.insert(1, create_flight_record(key, price=300))
-        assert_rm_result_ok(r1, "T1 insert should succeed into shadow")
+            # T1 和 T2 都插入同一 key
+            r1 = rm.insert(1, create_flight_record(key, price=300))
+            assert_rm_result_ok(r1, "T1 insert should succeed into shadow")
 
-        r2 = rm.insert(2, create_flight_record(key, price=999))
-        assert_rm_result_ok(r2, "T2 insert should succeed into shadow")
+            r2 = rm.insert(2, create_flight_record(key, price=999))
+            assert_rm_result_ok(r2, "T2 insert should succeed into shadow")
 
-        # T1 commit 成功
-        p1 = rm.prepare(1)
-        assert_rm_result_ok(p1, "T1 prepare should succeed")
-        rm.commit(1)
+            # T1 commit 成功
+            p1 = rm.prepare(1)
+            assert_rm_result_ok(p1, "T1 prepare should succeed")
+            rm.commit(1)
 
-        # T2 prepare 应失败 (KEY_EXISTS)
-        p2 = rm.prepare(2)
-        assert_key_exists(p2, key)
-        rm.abort(2)
+            # T2 prepare 应失败 (KEY_EXISTS)
+            p2 = rm.prepare(2)
+            assert_key_exists(p2, key)
+            rm.abort(2)
 
-        # 最终状态应为 T1 的值
-        final = read_committed_like(rm, key)
-        assert final["price"] == 300, f"Expected price=300, got {final['price']}"
+            # 最终状态应为 T1 的值
+            final = read_committed_like(rm, key)
+            assert final["price"] == 300, f"Expected price=300, got {final['price']}"
 
-        conn.close()
-        print("✅ test_ww_conflict_insert_insert passed")
+            conn.close()
+            logger.info("✅ test_ww_conflict_insert_insert passed")
+            return True
+        except Exception as e:
+            logger.error(f"❌ test_ww_conflict_insert_insert FAILED: {str(e)}")
+            return False
 
     def test_ww_conflict_insert_update(self):
         """【测试场景】T1 insert, T2 update 同一 key
@@ -879,65 +911,149 @@ class TestConcurrencyStress:
 
 
 # =========================================================
+# 测试执行辅助函数
+# =========================================================
+
+
+def run_test(test_fn, test_name):
+    """运行单个测试并捕获错误"""
+    try:
+        logger.info(f"▶ Running: {test_name}")
+        test_fn()
+        logger.info(f"✅ PASSED: {test_name}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ FAILED: {test_name}")
+        logger.error(f"   Error: {str(e)}")
+        import traceback
+        logger.error(f"   Traceback: {traceback.format_exc()}")
+        return False
+
+
+# =========================================================
 # Main 入口
 # =========================================================
 
 
 def run_all_tests():
     """运行所有测试"""
-    print("=" * 60)
-    print("Resource Manager Test Suite")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Resource Manager Test Suite")
+    logger.info("=" * 60)
+
+    test_results = []
+    total_tests = 0
+    passed_tests = 0
 
     # Category 1: WW 冲突类
-    print("\n【Category 1】WW Conflicts")
-    print("-" * 60)
+    logger.info("\n【Category 1】WW Conflicts")
+    logger.info("-" * 60)
     ww = TestWWConflicts()
-    ww.test_ww_conflict_insert_insert()
-    ww.test_ww_conflict_insert_update()
-    ww.test_ww_conflict_insert_delete()
-    ww.test_ww_conflict_update_insert()
-    ww.test_ww_conflict_update_update()
-    ww.test_ww_conflict_update_delete()
-    ww.test_ww_conflict_delete_insert()
-    ww.test_ww_conflict_delete_update()
-    ww.test_ww_conflict_delete_delete()
+    tests_cat1 = [
+        (ww.test_ww_conflict_insert_insert, "test_ww_conflict_insert_insert"),
+        (ww.test_ww_conflict_insert_update, "test_ww_conflict_insert_update"),
+        (ww.test_ww_conflict_insert_delete, "test_ww_conflict_insert_delete"),
+        (ww.test_ww_conflict_update_insert, "test_ww_conflict_update_insert"),
+        (ww.test_ww_conflict_update_update, "test_ww_conflict_update_update"),
+        (ww.test_ww_conflict_update_delete, "test_ww_conflict_update_delete"),
+        (ww.test_ww_conflict_delete_insert, "test_ww_conflict_delete_insert"),
+        (ww.test_ww_conflict_delete_update, "test_ww_conflict_delete_update"),
+        (ww.test_ww_conflict_delete_delete, "test_ww_conflict_delete_delete"),
+    ]
+    for test_fn, test_name in tests_cat1:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 2: Abort 路径验证类
-    print("\n【Category 2】Abort Paths")
-    print("-" * 60)
+    logger.info("\n【Category 2】Abort Paths")
+    logger.info("-" * 60)
     abort = TestAbortPaths()
-    abort.test_abort_rollback_insert()
-    abort.test_abort_rollback_update()
-    abort.test_abort_rollback_delete()
-    abort.test_abort_releases_locks()
+    tests_cat2 = [
+        (abort.test_abort_rollback_insert, "test_abort_rollback_insert"),
+        (abort.test_abort_rollback_update, "test_abort_rollback_update"),
+        (abort.test_abort_rollback_delete, "test_abort_rollback_delete"),
+        (abort.test_abort_releases_locks, "test_abort_releases_locks"),
+    ]
+    for test_fn, test_name in tests_cat2:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 3: 多 key 事务类
-    print("\n【Category 3】Multi-Key Transactions")
-    print("-" * 60)
+    logger.info("\n【Category 3】Multi-Key Transactions")
+    logger.info("-" * 60)
     multi = TestMultiKeyTransactions()
-    multi.test_multi_key_same_page()
-    multi.test_multi_key_cross_page()
-    multi.test_multi_key_no_conflict()
+    tests_cat3 = [
+        (multi.test_multi_key_same_page, "test_multi_key_same_page"),
+        (multi.test_multi_key_cross_page, "test_multi_key_cross_page"),
+        (multi.test_multi_key_no_conflict, "test_multi_key_no_conflict"),
+    ]
+    for test_fn, test_name in tests_cat3:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 4: Prepare 不变式与错误处理类
-    print("\n【Category 4】Prepare Invariants")
-    print("-" * 60)
+    logger.info("\n【Category 4】Prepare Invariants")
+    logger.info("-" * 60)
     prep = TestPrepareInvariants()
-    prep.test_read_nonexistent_key()
-    prep.test_update_nonexistent_key()
-    prep.test_delete_nonexistent_key()
+    tests_cat4 = [
+        (prep.test_read_nonexistent_key, "test_read_nonexistent_key"),
+        (prep.test_update_nonexistent_key, "test_update_nonexistent_key"),
+        (prep.test_delete_nonexistent_key, "test_delete_nonexistent_key"),
+    ]
+    for test_fn, test_name in tests_cat4:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
     # Category 5: 并发压力测试类 (Priority 2) - 高强度
-    print("\n【Category 5】Concurrency Stress Tests (High Intensity)")
-    print("-" * 60)
+    logger.info("\n【Category 5】Concurrency Stress Tests (High Intensity)")
+    logger.info("-" * 60)
     stress = TestConcurrencyStress()
-    stress.test_hotspot_key_contention()
-    stress.test_uniform_key_distribution()
+    tests_cat5 = [
+        (stress.test_hotspot_key_contention, "test_hotspot_key_contention"),
+        (stress.test_uniform_key_distribution, "test_uniform_key_distribution"),
+    ]
+    for test_fn, test_name in tests_cat5:
+        total_tests += 1
+        if run_test(test_fn, test_name):
+            passed_tests += 1
+            test_results.append((test_name, "PASSED"))
+        else:
+            test_results.append((test_name, "FAILED"))
 
-    print("\n" + "=" * 60)
-    print("✅✅✅ ALL RM TESTS PASSED ✅✅✅")
-    print("=" * 60)
+    # 输出测试总结
+    logger.info("\n" + "=" * 60)
+    logger.info("RM TEST SUMMARY")
+    logger.info("=" * 60)
+    logger.info(f"Total Tests: {total_tests}")
+    logger.info(f"Passed: {passed_tests}")
+    logger.info(f"Failed: {total_tests - passed_tests}")
+    logger.info(f"Success Rate: {passed_tests / total_tests * 100:.1f}%")
+    logger.info("\nDetailed Results:")
+    for test_name, status in test_results:
+        status_symbol = "✅" if status == "PASSED" else "❌"
+        logger.info(f"  {status_symbol} {test_name}: {status}")
+
+    if passed_tests == total_tests:
+        logger.info("\n✅✅✅ ALL RM TESTS PASSED ✅✅✅")
+    else:
+        logger.info(f"\n⚠️ {total_tests - passed_tests} tests failed")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
