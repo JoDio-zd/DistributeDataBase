@@ -4,7 +4,7 @@ import requests
 class WC:
     def __init__(
         self,
-        tm_url="http://127.0.0.1:9000",
+        tm_url="http://127.0.0.1:9001",
         flight_rm_url="http://127.0.0.1:8001",
         hotel_rm_url="http://127.0.0.1:8002",
         car_rm_url="http://127.0.0.1:8003",

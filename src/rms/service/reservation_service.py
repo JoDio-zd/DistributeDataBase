@@ -56,7 +56,7 @@ rm = ResourceManager(
 def enlist(req: TxnRequest):
     requests.request(
         "POST",
-        "http://127.0.0.1:9000/txn/enlist",
+        "http://127.0.0.1:9001/txn/enlist",
         json={"xid": req.xid, "rm": "http://127.0.0.1:8005"},
         timeout=3,
     )
