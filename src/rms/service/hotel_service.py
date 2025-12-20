@@ -33,7 +33,7 @@ conn = pymysql.connect(
 )
 
 page_size = 2
-key_width = 4
+key_width = 10
 
 page_index = OrderedStringPageIndex(
     page_size=page_size,

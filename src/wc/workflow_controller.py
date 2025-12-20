@@ -34,7 +34,7 @@ class WC:
             raise RuntimeError("commit failed")
 
     def abort(self, xid: int):
-        requests.post(f"{self.tm}/txn/abort", params={"xid": xid})
+        requests.post(f"{self.tm}/txn/abort", json={"xid": xid})
 
     # =========================================================
     # Flight APIs
