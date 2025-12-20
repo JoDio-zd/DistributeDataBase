@@ -35,6 +35,8 @@ class ResourceManager:
         self.global_last_commit_xid = 0
         self.txn_start_xid: dict[int, dict[str, int]] = {}
         self.locker = RowLockManager()
+        self.read_set: dict[int, dict[str, int]] = {}
+        self.write_set: dict[int, dict[str, int]] = {}
 
         logger.info(
             "ResourceManager initialized: table=%s, key=%s, index=%s, io=%s",
@@ -98,11 +100,16 @@ class ResourceManager:
             self.txn_start_xid[xid] = {}
         if key not in self.txn_start_xid[xid]:
             self.txn_start_xid[xid][key] = record.version
+        if xid not in self.write_set:
+            self.read_set[xid] = {}
+            self.read_set[xid][key] = record.version
         return RMResult(ok=True, value=record)
 
     def insert(self, xid: int, record: dict) -> None:
         # For Insert operation, we assume the record contains the key field.
         key = record[self.key_field].zfill(self.key_width)
+        if xid in self.read_set and key in self.read_set[xid]:
+            self.read_set[xid].pop(key)
         record[self.key_field] = key
         logger.info("RM.insert: xid=%s key=%s", xid, key)
         record_existed = self._get_record(xid, key, for_write=False)
@@ -112,8 +119,11 @@ class ResourceManager:
                 xid, key
             )
             return RMResult(ok=False, err=ErrCode.KEY_EXISTS)
-        record = Record(record, version=None)
+        record = Record(record, version=xid)
         self.shadow_pool.put_record(xid, key, record)
+        if xid not in self.write_set:
+            self.write_set[xid] = {}
+            self.write_set[xid][key] = record.version
         logger.info(
             "RM.insert success: xid=%s key=%s version=%s",
             xid, key, xid
@@ -121,6 +131,8 @@ class ResourceManager:
         return RMResult(ok=True, value=record)
     
     def delete(self, xid: int, key) -> None:
+        if xid in self.read_set and key in self.read_set[xid]:
+            self.read_set[xid].pop(key)
         key = key.zfill(self.key_width)
         record = self._get_record(xid, key, for_write=True)
         logger.info("RM.delete: xid=%s key=%s, version=%s", xid, key, record.version if record else None)
@@ -129,9 +141,14 @@ class ResourceManager:
         self.txn_start_xid.setdefault(xid, {})[key] = record.version
         record.deleted = True
         record.version = xid
+        if xid not in self.write_set:
+            self.write_set[xid] = {}
+            self.write_set[xid][key] = record.version
         return RMResult(ok=True, value=record)
 
     def update(self, xid: int, key: str, updates: dict) -> None:
+        if xid in self.read_set and key in self.read_set[xid]:
+            self.read_set[xid].pop(key)
         key = key.zfill(self.key_width)
         logger.info("RM.update: xid=%s key=%s updates=%s", xid, key, list(updates.keys()))
         record = self._get_record(xid, key, for_write=True)
@@ -150,6 +167,9 @@ class ResourceManager:
         for field, value in updates.items():
             record[field] = value
         record.version = xid
+        if xid not in self.write_set:
+            self.read_set.setdefault(xid, {})
+            self.read_set[xid].setdefault(key, record.version)
         logger.info(
             "RM.update success: xid=%s key=%s start_version=%s",
             xid, key, self._get_start_version(xid, key)
@@ -216,6 +236,16 @@ class ResourceManager:
                     xid, key, committed_record.version, start_version
                 )
                 return RMResult(ok=False, err=ErrCode.VERSION_CONFLICT)
+        for xid_ in self.read_set.keys():
+            if xid_ == xid:
+                for key_ in self.read_set[xid_]:
+                    if self.read_set[xid_][key_] != self._get_record(xid_, key_, False).version:
+                        self.locker.unlock_all(xid)
+                        logger.warning(
+                            "RM.prepare read-write conflict: xid=%s key=%s",
+                            xid, key_
+                        )
+                        return RMResult(ok=False, err=ErrCode.READ_WRITE_CONFLICT)
         logger.info(
             "RM.prepare success: xid=%s keys=%s",
             xid, list(shadow.keys())

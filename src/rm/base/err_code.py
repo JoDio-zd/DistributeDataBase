@@ -16,6 +16,7 @@ class ErrCode(enum.Enum):
     LOCK_CONFLICT = 31           # try_lock 失败 / deadlock avoid
     VERSION_CONFLICT = 32        # OCC 版本校验失败
     WRITE_WRITE_CONFLICT = 33    # 可选：更语义化（如果你未来区分的话）
+    READ_WRITE_CONFLICT = 34     # 可选：更语义化（如果你未来区分的话）
 
     # ---------- Storage / system (usually retryable or escalate) ----------
     IO_ERROR = 40                # page_in/page_out/db 读写失败
