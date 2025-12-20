@@ -5,6 +5,8 @@ from src.rm.impl.order_string_page_index import OrderedStringPageIndex
 from src.rm.base.page import Record
 from src.rm.impl.lock_manager import RowLockManager
 from src.rm.base.err_code import RMResult, ErrCode
+from src.rm.base.page_io import PageIO
+from src.rm.base.page_index import PageIndex
 import logging
 
 logger = logging.getLogger("rm")
@@ -15,8 +17,8 @@ class ResourceManager:
     def __init__(
         self,
         *,
-        page_index,
-        page_io,
+        page_index: PageIndex,
+        page_io: PageIO,
         table: str,
         key_column: str,
         key_width: int = 4,

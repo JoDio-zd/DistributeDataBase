@@ -29,7 +29,7 @@ class MySQLPageIO(PageIO):
         sql = f"""
             SELECT *
             FROM {self.table}
-            WHERE {self.key_column} >= %s AND {self.key_column} < %s
+            WHERE {self.key_column} >= %s AND {self.key_column} <= %s
         """
 
         cursor = self.conn.cursor()

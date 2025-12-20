@@ -1,8 +1,8 @@
 # src/rms/car_rm_service.py
 from fastapi import FastAPI, HTTPException
 from src.rm.resource_manager import ResourceManager
-from src.rm.impl.mysql_page_io import MySQLPageIO
-from src.rm.impl.order_string_page_index import OrderedStringPageIndex
+from src.rm.impl.page_io.mysql_page_io import MySQLPageIO
+from src.rm.impl.page_index.order_string_page_index import OrderedStringPageIndex
 from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
 import pymysql
 import os
