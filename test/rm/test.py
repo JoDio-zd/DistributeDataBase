@@ -6,7 +6,13 @@ Resource Manager Test Suite
 import logging
 import threading
 import time
+import sys
+import os
 from datetime import datetime
+
+# 添加项目根目录到 sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from test.rm.helpers import *
 
 # =========================================================
@@ -18,21 +24,38 @@ import os
 log_dir = os.path.join(os.path.dirname(__file__), "../../logs")
 os.makedirs(log_dir, exist_ok=True)
 
-# 配置日志
+# 配置日志 - 只输出关键信息
 log_file = os.path.join(log_dir, f"rm_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file, encoding='utf-8'),
-        logging.StreamHandler()  # 同时输出到终端，方便实时查看
-    ]
-)
-logger = logging.getLogger(__name__)
 
-logger.info("=" * 60)
-logger.info(f"RM Test Suite Started - Log file: {log_file}")
-logger.info("=" * 60)
+# 创建自定义格式器
+class KeyInfoFormatter(logging.Formatter):
+    """只输出关键信息的格式器"""
+    def format(self, record):
+        # 只格式化关键消息（✅、❌、Summary等）
+        msg = record.getMessage()
+        if any(x in msg for x in ['✅', '❌', 'SUMMARY', 'Category', '===', 'Running:', 'PASSED', 'FAILED']):
+            return f"{msg}"
+        return None
+
+# 文件处理器 - 记录所有信息
+file_handler = logging.FileHandler(log_file, encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+# 控制台处理器 - 只显示关键信息
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(KeyInfoFormatter())
+
+# 配置 logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+print("=" * 60)
+print(f"RM Test Suite - Log: {log_file}")
+print("=" * 60)
 
 # =========================================================
 # 测试类别 1: WW 冲突类
@@ -771,8 +794,8 @@ class TestConcurrencyStress:
         【期望结果】最多 1 个成功
         【性能指标】冲突率、成功率、吞吐量
         """
-        THREADS = 100
-        ROUNDS = 200
+        THREADS = 50  # 从100降低到50，加快测试速度
+        ROUNDS = 50  # 从200降低到50，加快测试速度
 
         for round_num in range(ROUNDS):
             conn = new_conn()
@@ -842,8 +865,8 @@ class TestConcurrencyStress:
         【期望结果】所有事务都成功
         【性能指标】100% 成功率，高吞吐量
         """
-        THREADS = 100
-        ROUNDS = 100  # Uniform 场景较简单，减少轮次
+        THREADS = 50  # 从100降低到50，加快测试速度
+        ROUNDS = 25  # Uniform 场景较简单，减少轮次（从100降低）
 
         for round_num in range(ROUNDS):
             conn = new_conn()

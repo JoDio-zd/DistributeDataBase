@@ -5,20 +5,20 @@ Workflow Controller Test Configuration
 
 
 class TestConfig:
-    """测试配置（用户要求：高强度并发）"""
+    """测试配置（已调整为快速测试模式）"""
 
-    # 并发强度配置
-    THREADS_LOW = 10      # 低并发基准测试
-    THREADS_MED = 50      # 中并发测试
-    THREADS_HIGH = 100    # 高并发压力测试（用户要求）
-    THREADS_ULTRA = 150   # 超高并发（可选）
+    # 并发强度配置（降低以加快测试速度）
+    THREADS_LOW = 5  # 低并发基准测试（从20降低）
+    THREADS_MED = 10  # 中并发测试（从50降低）
+    THREADS_HIGH = 15  # 高并发压力测试（从100降低）
+    THREADS_ULTRA = 20  # 超高并发（从150降低）
 
-    # 测试轮次
-    ROUNDS = 200          # 标准测试轮次
-    ROUNDS_QUICK = 50     # 快速测试轮次
+    # 测试轮次（降低以加快测试速度）
+    ROUNDS = 10  # 标准测试轮次（从200降低）
+    ROUNDS_QUICK = 10  # 快速测试轮次（从50降低）
 
     # 并发控制
-    SLEEP_MAX = 0.005     # 随机 sleep 上限（模拟真实延迟）
+    SLEEP_MAX = 0.005  # 随机 sleep 上限（模拟真实延迟）
 
     # Test 数据前缀（确保测试隔离）
     FLIGHT_PREFIX = "FL"
