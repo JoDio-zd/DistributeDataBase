@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from src.rm.resource_manager import ResourceManager
 from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
-from src.rm.impl.mysql_page_io import MySQLPageIO
-from src.rm.impl.order_string_page_index import OrderedStringPageIndex
+from src.rm.impl.page_io.mysql_multi_index_page_io import MySQLMultiIndexPageIO
+from src.rm.impl.page_index.direct_page_index import DirectPageIndex
 import pymysql
 import os
 import requests
@@ -30,15 +30,15 @@ conn = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor,
 )
 
-page_size = 16
-key_width = 26
+page_size = 18
+key_width = 28
 
-page_index = OrderedStringPageIndex(
+page_index = DirectPageIndex(
     page_size=page_size,
     key_width=key_width,
 )
 
-page_io = MySQLPageIO(
+page_io = MySQLMultiIndexPageIO(
     conn=conn,
     table="HOTELS",
     key_column="location",
