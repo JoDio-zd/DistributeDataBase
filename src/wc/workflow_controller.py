@@ -9,12 +9,14 @@ class WC:
         hotel_rm_url="http://127.0.0.1:8002",
         car_rm_url="http://127.0.0.1:8003",
         customer_rm_url="http://127.0.0.1:8004",
+        reservation_rm_url="http://127.0.0.1:8005",
     ):
         self.tm = tm_url.rstrip("/")
         self.flight_rm = flight_rm_url.rstrip("/")
         self.hotel_rm = hotel_rm_url.rstrip("/")
         self.car_rm = car_rm_url.rstrip("/")
         self.customer_rm = customer_rm_url.rstrip("/")
+        self.reservation_rm = reservation_rm_url.rstrip("/")
 
     # =========================================================
     # txn control
@@ -71,19 +73,42 @@ class WC:
             return None
         return r.json().get("record")
 
-    def reserveFlight(self, xid: int, flightNum, seats=1):
-        rec = self.queryFlight(xid, flightNum)
-        if rec is None:
+    def reserveFlight(self, xid: int, custName, flightNum, seats=1):
+        # 1. 校验客户存在
+        cust = self.queryCustomer(xid, custName)
+        if cust is None:
+            raise RuntimeError("customer not found")
+
+        # 2. 查询航班
+        flight = self.queryFlight(xid, flightNum)
+        if flight is None:
             raise RuntimeError("flight not found")
-        if rec["numAvail"] < seats:
+        if flight["numAvail"] < seats:
             raise RuntimeError("not enough seats")
 
+        # 3. 扣减航班余量
         r = requests.put(
             f"{self.flight_rm}/records/{flightNum}",
             json={
                 "xid": xid,
                 "updates": {
-                    "numAvail": rec["numAvail"] - seats
+                    "numAvail": flight["numAvail"] - seats
+                },
+            },
+        )
+        if r.status_code != 200:
+            raise RuntimeError(r.text)
+
+        # 4. 创建 reservation 记录
+        r = requests.post(
+            f"{self.reservation_rm}/records",
+            json={
+                "xid": xid,
+                "record": {
+                    "custName": custName,
+                    "resvType": "FLIGHT",
+                    "resvKey": flightNum,
+                    "count": seats,
                 },
             },
         )
@@ -127,11 +152,15 @@ class WC:
             return None
         return r.json().get("record")
 
-    def reserveHotel(self, xid: int, location, rooms=1):
-        rec = self.queryHotel(xid, location)
-        if rec is None:
+    def reserveHotel(self, xid: int, custName, location, rooms=1):
+        cust = self.queryCustomer(xid, custName)
+        if cust is None:
+            raise RuntimeError("customer not found")
+
+        hotel = self.queryHotel(xid, location)
+        if hotel is None:
             raise RuntimeError("hotel not found")
-        if rec["numAvail"] < rooms:
+        if hotel["numAvail"] < rooms:
             raise RuntimeError("not enough rooms")
 
         r = requests.put(
@@ -139,7 +168,22 @@ class WC:
             json={
                 "xid": xid,
                 "updates": {
-                    "numAvail": rec["numAvail"] - rooms
+                    "numAvail": hotel["numAvail"] - rooms
+                },
+            },
+        )
+        if r.status_code != 200:
+            raise RuntimeError(r.text)
+
+        r = requests.post(
+            f"{self.reservation_rm}/records",
+            json={
+                "xid": xid,
+                "record": {
+                    "custName": custName,
+                    "resvType": "HOTEL",
+                    "resvKey": location,
+                    "count": rooms,
                 },
             },
         )
@@ -183,11 +227,15 @@ class WC:
             return None
         return r.json().get("record")
 
-    def reserveCar(self, xid: int, location, cars=1):
-        rec = self.queryCar(xid, location)
-        if rec is None:
+    def reserveCar(self, xid: int, custName, location, cars=1):
+        cust = self.queryCustomer(xid, custName)
+        if cust is None:
+            raise RuntimeError("customer not found")
+
+        car = self.queryCar(xid, location)
+        if car is None:
             raise RuntimeError("car location not found")
-        if rec["numAvail"] < cars:
+        if car["numAvail"] < cars:
             raise RuntimeError("not enough cars")
 
         r = requests.put(
@@ -195,7 +243,22 @@ class WC:
             json={
                 "xid": xid,
                 "updates": {
-                    "numAvail": rec["numAvail"] - cars
+                    "numAvail": car["numAvail"] - cars
+                },
+            },
+        )
+        if r.status_code != 200:
+            raise RuntimeError(r.text)
+
+        r = requests.post(
+            f"{self.reservation_rm}/records",
+            json={
+                "xid": xid,
+                "record": {
+                    "custName": custName,
+                    "resvType": "CAR",
+                    "resvKey": location,
+                    "count": cars,
                 },
             },
         )
