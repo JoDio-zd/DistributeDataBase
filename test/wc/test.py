@@ -52,7 +52,7 @@ def case_concurrent_addFlight():
 
     def txn_body(wc, xid):
         tiny_sleep()
-        wc.addFlight(xid, FLIGHT, PRICE, SEATS)
+        wc.addHotel(xid, "SHANGHAI", PRICE, SEATS)
 
     threads = [
         threading.Thread(target=run_txn, args=(wc, txn_body, results, start))
@@ -164,8 +164,8 @@ def case_delete_atomicity():
 
 def run_all():
     cases = [
-        # case_concurrent_addFlight,
-        case_abort_visibility,
+        case_concurrent_addFlight,
+        # case_abort_visibility,
         # case_concurrent_reserve,
         # case_delete_atomicity,
     ]

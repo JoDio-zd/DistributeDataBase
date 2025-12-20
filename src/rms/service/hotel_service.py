@@ -1,5 +1,5 @@
-# src/rms/flight_rm_service.py
-from fastapi import FastAPI, HTTPException
+# src/rms/hotel_rm_service.py
+from fastapi import FastAPI
 from src.rm.resource_manager import ResourceManager
 from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
 import pymysql
@@ -13,8 +13,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-# port = 8001
-app = FastAPI(title="Flight RM Service")
+# port = 8002
+app = FastAPI(title="Hotel RM Service")
 
 # -----------------------------
 # RM 初始化（进程级单例）
@@ -22,7 +22,7 @@ app = FastAPI(title="Flight RM Service")
 
 conn = pymysql.connect(
     host="127.0.0.1",
-    port=33061,
+    port=33062,
     user="root",
     password="1234",
     database="rm_db",
@@ -32,8 +32,8 @@ conn = pymysql.connect(
 
 rm = ResourceManager(
     db_conn=conn,
-    table="FLIGHTS",
-    key_column="flightNum",
+    table="HOTELS",
+    key_column="location",
     page_size=2,
 )
 
@@ -41,7 +41,7 @@ def enlist(req):
     requests.request(
         "POST",
         "http://127.0.0.1:9000/txn/enlist",
-        json={"xid": req.xid, "rm": "http://127.0.0.1:8001"},
+        json={"xid": req.xid, "rm": "http://127.0.0.1:8002"},
         timeout=3,
     )
 
@@ -118,5 +118,4 @@ def health():
 
 @app.post("/shutdown")
 def shutdown():
-    # 简单实现：直接退出进程
     os._exit(0)
