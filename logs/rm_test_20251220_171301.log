@@ -1,0 +1,161 @@
+2025-12-20 17:13:01,579 - INFO - ============================================================
+2025-12-20 17:13:01,579 - INFO - Resource Manager Test Suite
+2025-12-20 17:13:01,580 - INFO - ============================================================
+2025-12-20 17:13:01,580 - INFO - 
+【Category 1】WW Conflicts
+2025-12-20 17:13:01,580 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:01,580 - INFO - ▶ Running: test_ww_conflict_insert_insert
+2025-12-20 17:13:01,592 - ERROR - ❌ test_ww_conflict_insert_insert FAILED: T1 insert should succeed into shadow | Expected ok=True, got ok=False with err=ErrCode.KEY_EXISTS
+2025-12-20 17:13:01,592 - INFO - ✅ PASSED: test_ww_conflict_insert_insert
+2025-12-20 17:13:01,592 - INFO - ▶ Running: test_ww_conflict_insert_update
+2025-12-20 17:13:01,597 - ERROR - ❌ FAILED: test_ww_conflict_insert_update
+2025-12-20 17:13:01,597 - ERROR -    Error: Expected KEY_NOT_FOUND for key= | Expected failure but got ok=True
+2025-12-20 17:13:01,598 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 945, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 131, in test_ww_conflict_insert_update
+    assert_key_not_found(r2_read)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 122, in assert_key_not_found
+    assert_rm_result_fail(
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 114, in assert_rm_result_fail
+    assert not result.ok, f"{msg} | Expected failure but got ok=True"
+AssertionError: Expected KEY_NOT_FOUND for key= | Expected failure but got ok=True
+
+2025-12-20 17:13:01,598 - INFO - ▶ Running: test_ww_conflict_insert_delete
+2025-12-20 17:13:01,601 - ERROR - ❌ FAILED: test_ww_conflict_insert_delete
+2025-12-20 17:13:01,601 - ERROR -    Error: Expected KEY_NOT_FOUND for key=T2 delete non-existent key should fail | Expected failure but got ok=True
+2025-12-20 17:13:01,601 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 945, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 168, in test_ww_conflict_insert_delete
+    assert_key_not_found(r2_delete, "T2 delete non-existent key should fail")
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 122, in assert_key_not_found
+    assert_rm_result_fail(
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 114, in assert_rm_result_fail
+    assert not result.ok, f"{msg} | Expected failure but got ok=True"
+AssertionError: Expected KEY_NOT_FOUND for key=T2 delete non-existent key should fail | Expected failure but got ok=True
+
+2025-12-20 17:13:01,601 - INFO - ▶ Running: test_ww_conflict_update_insert
+2025-12-20 17:13:01,604 - ERROR - ❌ FAILED: test_ww_conflict_update_insert
+2025-12-20 17:13:01,604 - ERROR -    Error: Insert into shadow succeeds | Expected ok=True, got ok=False with err=ErrCode.KEY_EXISTS
+2025-12-20 17:13:01,604 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 945, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 212, in test_ww_conflict_update_insert
+    assert_rm_result_ok(r2_insert, "Insert into shadow succeeds")
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 109, in assert_rm_result_ok
+    assert result.ok, f"{msg} | Expected ok=True, got ok=False with err={result.err}"
+AssertionError: Insert into shadow succeeds | Expected ok=True, got ok=False with err=ErrCode.KEY_EXISTS
+
+2025-12-20 17:13:01,604 - INFO - ▶ Running: test_ww_conflict_update_update
+2025-12-20 17:13:01,609 - INFO - ✅ PASSED: test_ww_conflict_update_update
+2025-12-20 17:13:01,609 - INFO - ▶ Running: test_ww_conflict_update_delete
+2025-12-20 17:13:01,613 - INFO - ✅ PASSED: test_ww_conflict_update_delete
+2025-12-20 17:13:01,613 - INFO - ▶ Running: test_ww_conflict_delete_insert
+2025-12-20 17:13:01,618 - INFO - ✅ PASSED: test_ww_conflict_delete_insert
+2025-12-20 17:13:01,618 - INFO - ▶ Running: test_ww_conflict_delete_update
+2025-12-20 17:13:01,623 - ERROR - ❌ FAILED: test_ww_conflict_delete_update
+2025-12-20 17:13:01,623 - ERROR -    Error: Expected VERSION_CONFLICT for key=1008 | Expected err=ErrCode.VERSION_CONFLICT, got err=ErrCode.KEY_NOT_FOUND
+2025-12-20 17:13:01,623 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 945, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 390, in test_ww_conflict_delete_update
+    assert_version_conflict(p2, key)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 136, in assert_version_conflict
+    assert_rm_result_fail(
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 115, in assert_rm_result_fail
+    assert result.err == expected_err, (
+AssertionError: Expected VERSION_CONFLICT for key=1008 | Expected err=ErrCode.VERSION_CONFLICT, got err=ErrCode.KEY_NOT_FOUND
+
+2025-12-20 17:13:01,623 - INFO - ▶ Running: test_ww_conflict_delete_delete
+2025-12-20 17:13:01,628 - ERROR - ❌ FAILED: test_ww_conflict_delete_delete
+2025-12-20 17:13:01,628 - ERROR -    Error: Expected VERSION_CONFLICT for key=1009 | Expected failure but got ok=True
+2025-12-20 17:13:01,629 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 945, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 433, in test_ww_conflict_delete_delete
+    assert_version_conflict(p2, key)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 136, in assert_version_conflict
+    assert_rm_result_fail(
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/helpers.py", line 114, in assert_rm_result_fail
+    assert not result.ok, f"{msg} | Expected failure but got ok=True"
+AssertionError: Expected VERSION_CONFLICT for key=1009 | Expected failure but got ok=True
+
+2025-12-20 17:13:01,629 - INFO - 
+【Category 2】Abort Paths
+2025-12-20 17:13:01,629 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:01,629 - INFO - ▶ Running: test_abort_rollback_insert
+2025-12-20 17:13:01,634 - INFO - ✅ PASSED: test_abort_rollback_insert
+2025-12-20 17:13:01,634 - INFO - ▶ Running: test_abort_rollback_update
+2025-12-20 17:13:01,637 - INFO - ✅ PASSED: test_abort_rollback_update
+2025-12-20 17:13:01,637 - INFO - ▶ Running: test_abort_rollback_delete
+2025-12-20 17:13:01,641 - INFO - ✅ PASSED: test_abort_rollback_delete
+2025-12-20 17:13:01,641 - INFO - ▶ Running: test_abort_releases_locks
+2025-12-20 17:13:01,646 - INFO - ✅ PASSED: test_abort_releases_locks
+2025-12-20 17:13:01,646 - INFO - 
+【Category 3】Multi-Key Transactions
+2025-12-20 17:13:01,646 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:01,647 - INFO - ▶ Running: test_multi_key_same_page
+2025-12-20 17:13:01,653 - INFO - ✅ PASSED: test_multi_key_same_page
+2025-12-20 17:13:01,653 - INFO - ▶ Running: test_multi_key_cross_page
+2025-12-20 17:13:01,659 - INFO - ✅ PASSED: test_multi_key_cross_page
+2025-12-20 17:13:01,659 - INFO - ▶ Running: test_multi_key_no_conflict
+2025-12-20 17:13:01,666 - INFO - ✅ PASSED: test_multi_key_no_conflict
+2025-12-20 17:13:01,666 - INFO - 
+【Category 4】Prepare Invariants
+2025-12-20 17:13:01,666 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:01,666 - INFO - ▶ Running: test_read_nonexistent_key
+2025-12-20 17:13:01,670 - INFO - ✅ PASSED: test_read_nonexistent_key
+2025-12-20 17:13:01,671 - INFO - ▶ Running: test_update_nonexistent_key
+2025-12-20 17:13:01,674 - INFO - ✅ PASSED: test_update_nonexistent_key
+2025-12-20 17:13:01,679 - INFO - ▶ Running: test_delete_nonexistent_key
+2025-12-20 17:13:01,683 - INFO - ✅ PASSED: test_delete_nonexistent_key
+2025-12-20 17:13:01,684 - INFO - 
+【Category 5】Concurrency Stress Tests (High Intensity)
+2025-12-20 17:13:01,684 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:01,684 - INFO - ▶ Running: test_hotspot_key_contention
+2025-12-20 17:13:01,973 - INFO - ✅ PASSED: test_hotspot_key_contention
+2025-12-20 17:13:01,973 - INFO - ▶ Running: test_uniform_key_distribution
+2025-12-20 17:13:01,977 - ERROR - ❌ FAILED: test_uniform_key_distribution
+2025-12-20 17:13:01,977 - ERROR -    Error: Round 0: Expected all 50 to commit, got 0
+2025-12-20 17:13:01,978 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 945, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/rm/test.py", line 917, in test_uniform_key_distribution
+    assert len(commits) == THREADS, (
+AssertionError: Round 0: Expected all 50 to commit, got 0
+
+2025-12-20 17:13:01,978 - INFO - 
+============================================================
+2025-12-20 17:13:01,978 - INFO - RM TEST SUMMARY
+2025-12-20 17:13:01,978 - INFO - ============================================================
+2025-12-20 17:13:01,978 - INFO - Total Tests: 21
+2025-12-20 17:13:01,978 - INFO - Passed: 15
+2025-12-20 17:13:01,978 - INFO - Failed: 6
+2025-12-20 17:13:01,978 - INFO - Success Rate: 71.4%
+2025-12-20 17:13:01,978 - INFO - 
+Detailed Results:
+2025-12-20 17:13:01,979 - INFO -   ✅ test_ww_conflict_insert_insert: PASSED
+2025-12-20 17:13:01,979 - INFO -   ❌ test_ww_conflict_insert_update: FAILED
+2025-12-20 17:13:01,979 - INFO -   ❌ test_ww_conflict_insert_delete: FAILED
+2025-12-20 17:13:01,979 - INFO -   ❌ test_ww_conflict_update_insert: FAILED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_ww_conflict_update_update: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_ww_conflict_update_delete: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_ww_conflict_delete_insert: PASSED
+2025-12-20 17:13:01,979 - INFO -   ❌ test_ww_conflict_delete_update: FAILED
+2025-12-20 17:13:01,979 - INFO -   ❌ test_ww_conflict_delete_delete: FAILED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_abort_rollback_insert: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_abort_rollback_update: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_abort_rollback_delete: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_abort_releases_locks: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_multi_key_same_page: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_multi_key_cross_page: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_multi_key_no_conflict: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_read_nonexistent_key: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_update_nonexistent_key: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_delete_nonexistent_key: PASSED
+2025-12-20 17:13:01,979 - INFO -   ✅ test_hotspot_key_contention: PASSED
+2025-12-20 17:13:01,979 - INFO -   ❌ test_uniform_key_distribution: FAILED
+2025-12-20 17:13:01,979 - INFO - 
+⚠️ 6 tests failed
+2025-12-20 17:13:01,980 - INFO - ============================================================

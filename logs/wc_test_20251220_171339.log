@@ -1,0 +1,399 @@
+2025-12-20 17:13:39,657 - INFO - ============================================================
+2025-12-20 17:13:39,657 - INFO - Workflow Controller Test Suite
+2025-12-20 17:13:39,659 - INFO - ============================================================
+2025-12-20 17:13:39,659 - INFO - 
+【Category 1】Uniqueness Constraints
+2025-12-20 17:13:39,659 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:39,659 - INFO - ▶ Running: test_concurrent_addFlight_stress
+2025-12-20 17:13:40,075 - INFO - ✅ PASSED: test_concurrent_addFlight_stress
+2025-12-20 17:13:40,075 - INFO - ▶ Running: test_concurrent_addHotel
+2025-12-20 17:13:40,381 - INFO - ✅ PASSED: test_concurrent_addHotel
+2025-12-20 17:13:40,381 - INFO - ▶ Running: test_concurrent_addCar
+2025-12-20 17:13:40,718 - INFO - ✅ PASSED: test_concurrent_addCar
+2025-12-20 17:13:40,718 - INFO - ▶ Running: test_concurrent_addCustomer
+2025-12-20 17:13:41,104 - INFO - ✅ PASSED: test_concurrent_addCustomer
+2025-12-20 17:13:41,104 - INFO - 
+【Category 2】Abort Visibility & Atomicity
+2025-12-20 17:13:41,104 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,104 - INFO - ▶ Running: test_abort_visibility
+2025-12-20 17:13:41,106 - ERROR - ❌ FAILED: test_abort_visibility
+2025-12-20 17:13:41,106 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,107 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 177, in test_abort_visibility
+    wc.addFlight(xid1, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,107 - INFO - ▶ Running: test_delete_atomicity
+2025-12-20 17:13:41,109 - ERROR - ❌ FAILED: test_delete_atomicity
+2025-12-20 17:13:41,109 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,109 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 193, in test_delete_atomicity
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,110 - INFO - ▶ Running: test_cross_service_abort
+2025-12-20 17:13:41,113 - ERROR - ❌ FAILED: test_cross_service_abort
+2025-12-20 17:13:41,113 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,113 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 225, in test_cross_service_abort
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,114 - INFO - ▶ Running: test_partial_operation_abort
+2025-12-20 17:13:41,116 - ERROR - ❌ FAILED: test_partial_operation_abort
+2025-12-20 17:13:41,117 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,118 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 246, in test_partial_operation_abort
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,118 - INFO - 
+【Category 3】No Oversell
+2025-12-20 17:13:41,118 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,118 - INFO - ▶ Running: test_concurrent_reserve_no_oversell
+2025-12-20 17:13:41,120 - ERROR - ❌ FAILED: test_concurrent_reserve_no_oversell
+2025-12-20 17:13:41,120 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,120 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 285, in test_concurrent_reserve_no_oversell
+    setup_flight(wc, flight_num, seats=SEATS)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,120 - INFO - ▶ Running: test_reserve_customer_not_exist
+2025-12-20 17:13:41,122 - ERROR - ❌ FAILED: test_reserve_customer_not_exist
+2025-12-20 17:13:41,122 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,123 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 339, in test_reserve_customer_not_exist
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,123 - INFO - ▶ Running: test_reserve_flight_not_exist
+2025-12-20 17:13:41,125 - ERROR - ❌ FAILED: test_reserve_flight_not_exist
+2025-12-20 17:13:41,125 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,125 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 360, in test_reserve_flight_not_exist
+    setup_customer(wc, cust_id)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 60, in setup_customer
+    wc.addCustomer(xid, cust_id)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 278, in addCustomer
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,125 - INFO - ▶ Running: test_reserve_insufficient_seats
+2025-12-20 17:13:41,129 - ERROR - ❌ FAILED: test_reserve_insufficient_seats
+2025-12-20 17:13:41,129 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,129 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 382, in test_reserve_insufficient_seats
+    setup_flight(wc, flight_num, seats=2)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,129 - INFO - ▶ Running: test_reserve_hotel_no_oversell
+2025-12-20 17:13:41,132 - ERROR - ❌ FAILED: test_reserve_hotel_no_oversell
+2025-12-20 17:13:41,132 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,132 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 411, in test_reserve_hotel_no_oversell
+    setup_hotel(wc, hotel_loc, rooms=ROOMS)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 41, in setup_hotel
+    wc.addHotel(xid, location, price, rooms)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 134, in addHotel
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,132 - INFO - ▶ Running: test_reserve_car_no_oversell
+2025-12-20 17:13:41,134 - ERROR - ❌ FAILED: test_reserve_car_no_oversell
+2025-12-20 17:13:41,134 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,135 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 461, in test_reserve_car_no_oversell
+    setup_car(wc, car_loc, cars=CARS)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 53, in setup_car
+    wc.addCar(xid, location, price, cars)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 207, in addCar
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,135 - INFO - 
+【Category 4】Cross-Service Transactions
+2025-12-20 17:13:41,135 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,135 - INFO - ▶ Running: test_cross_service_commit
+2025-12-20 17:13:41,137 - ERROR - ❌ FAILED: test_cross_service_commit
+2025-12-20 17:13:41,137 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,137 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 521, in test_cross_service_commit
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,138 - INFO - ▶ Running: test_cross_service_complex_workflow
+2025-12-20 17:13:41,140 - ERROR - ❌ FAILED: test_cross_service_complex_workflow
+2025-12-20 17:13:41,140 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,140 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 543, in test_cross_service_complex_workflow
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,140 - INFO - ▶ Running: test_cross_service_one_fails
+2025-12-20 17:13:41,143 - ERROR - ❌ FAILED: test_cross_service_one_fails
+2025-12-20 17:13:41,143 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,143 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 568, in test_cross_service_one_fails
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,144 - INFO - 
+【Category 5】2PC Failure Scenarios
+2025-12-20 17:13:41,144 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,144 - INFO - ▶ Running: test_prepare_fails_on_one_rm
+2025-12-20 17:13:41,147 - ERROR - ❌ FAILED: test_prepare_fails_on_one_rm
+2025-12-20 17:13:41,147 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,147 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 605, in test_prepare_fails_on_one_rm
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,147 - INFO - ▶ Running: test_prepare_fails_multiple_rms
+2025-12-20 17:13:41,149 - ERROR - ❌ FAILED: test_prepare_fails_multiple_rms
+2025-12-20 17:13:41,149 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,149 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 654, in test_prepare_fails_multiple_rms
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,149 - INFO - ▶ Running: test_tm_enlist_idempotent
+2025-12-20 17:13:41,152 - ERROR - ❌ FAILED: test_tm_enlist_idempotent
+2025-12-20 17:13:41,152 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,152 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 702, in test_tm_enlist_idempotent
+    wc.addFlight(xid, flight1, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,152 - INFO - 
+【Category 6】TM State Management
+2025-12-20 17:13:41,152 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,152 - INFO - ▶ Running: test_commit_nonexistent_xid
+2025-12-20 17:13:41,154 - INFO - ✅ PASSED: test_commit_nonexistent_xid
+2025-12-20 17:13:41,154 - INFO - ▶ Running: test_abort_nonexistent_xid
+2025-12-20 17:13:41,155 - INFO - ✅ PASSED: test_abort_nonexistent_xid
+2025-12-20 17:13:41,155 - INFO - ▶ Running: test_double_commit
+2025-12-20 17:13:41,157 - ERROR - ❌ FAILED: test_double_commit
+2025-12-20 17:13:41,157 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,157 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 766, in test_double_commit
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,157 - INFO - ▶ Running: test_commit_after_abort
+2025-12-20 17:13:41,159 - ERROR - ❌ FAILED: test_commit_after_abort
+2025-12-20 17:13:41,159 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,159 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 788, in test_commit_after_abort
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,159 - INFO - ▶ Running: test_abort_idempotent
+2025-12-20 17:13:41,163 - ERROR - ❌ FAILED: test_abort_idempotent
+2025-12-20 17:13:41,163 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,163 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 810, in test_abort_idempotent
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,163 - INFO - 
+【Category 7】Mixed Operations
+2025-12-20 17:13:41,163 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,163 - INFO - ▶ Running: test_mixed_add_delete_query
+2025-12-20 17:13:41,165 - ERROR - ❌ FAILED: test_mixed_add_delete_query
+2025-12-20 17:13:41,165 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,166 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 845, in test_mixed_add_delete_query
+    setup_flight(wc, flight1, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,166 - INFO - ▶ Running: test_read_own_write
+2025-12-20 17:13:41,168 - ERROR - ❌ FAILED: test_read_own_write
+2025-12-20 17:13:41,168 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,168 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 868, in test_read_own_write
+    wc.addFlight(xid, flight_num, 500, 10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,168 - INFO - ▶ Running: test_read_after_delete
+2025-12-20 17:13:41,170 - ERROR - ❌ FAILED: test_read_after_delete
+2025-12-20 17:13:41,170 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:41,171 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 887, in test_read_after_delete
+    setup_flight(wc, flight_num, seats=10)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:41,171 - INFO - 
+【Category 8】Concurrency & Key Distribution (High Intensity)
+2025-12-20 17:13:41,171 - INFO - ------------------------------------------------------------
+2025-12-20 17:13:41,171 - INFO - ▶ Running: test_hotspot_key_high_concurrency
+2025-12-20 17:13:41,455 - INFO - ✅ PASSED: test_hotspot_key_high_concurrency
+2025-12-20 17:13:41,455 - INFO - ▶ Running: test_uniform_key_low_conflict
+2025-12-20 17:13:44,715 - ERROR - ❌ FAILED: test_uniform_key_low_conflict
+2025-12-20 17:13:44,715 - ERROR -    Error: Round 0: Expected all 15 to commit, got 0
+2025-12-20 17:13:44,715 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 961, in test_uniform_key_low_conflict
+    assert r['commits'] == THREADS, (
+AssertionError: Round 0: Expected all 15 to commit, got 0
+
+2025-12-20 17:13:44,716 - INFO - ▶ Running: test_mixed_operations_high_concurrency
+2025-12-20 17:13:44,718 - ERROR - ❌ FAILED: test_mixed_operations_high_concurrency
+2025-12-20 17:13:44,718 - ERROR -    Error: Internal Server Error
+2025-12-20 17:13:44,719 - ERROR -    Traceback: Traceback (most recent call last):
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 1042, in run_test
+    test_fn()
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/test.py", line 986, in test_mixed_operations_high_concurrency
+    setup_flight(wc, flight_num, seats=SEATS)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/test/wc/helpers.py", line 29, in setup_flight
+    wc.addFlight(xid, flight_num, price, seats)
+  File "/Users/kevintu/sources/pythonProjects/Fudan code/DistributeDataBase/src/wc/workflow_controller.py", line 57, in addFlight
+    raise RuntimeError(r.text)
+RuntimeError: Internal Server Error
+
+2025-12-20 17:13:44,719 - INFO - 
+============================================================
+2025-12-20 17:13:44,719 - INFO - WC TEST SUMMARY
+2025-12-20 17:13:44,719 - INFO - ============================================================
+2025-12-20 17:13:44,719 - INFO - Total Tests: 31
+2025-12-20 17:13:44,719 - INFO - Passed: 7
+2025-12-20 17:13:44,719 - INFO - Failed: 24
+2025-12-20 17:13:44,719 - INFO - Success Rate: 22.6%
+2025-12-20 17:13:44,719 - INFO - 
+Detailed Results:
+2025-12-20 17:13:44,719 - INFO -   ✅ test_concurrent_addFlight_stress: PASSED
+2025-12-20 17:13:44,719 - INFO -   ✅ test_concurrent_addHotel: PASSED
+2025-12-20 17:13:44,719 - INFO -   ✅ test_concurrent_addCar: PASSED
+2025-12-20 17:13:44,719 - INFO -   ✅ test_concurrent_addCustomer: PASSED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_abort_visibility: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_delete_atomicity: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_cross_service_abort: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_partial_operation_abort: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_concurrent_reserve_no_oversell: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_reserve_customer_not_exist: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_reserve_flight_not_exist: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_reserve_insufficient_seats: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_reserve_hotel_no_oversell: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_reserve_car_no_oversell: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_cross_service_commit: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_cross_service_complex_workflow: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_cross_service_one_fails: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_prepare_fails_on_one_rm: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_prepare_fails_multiple_rms: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_tm_enlist_idempotent: FAILED
+2025-12-20 17:13:44,719 - INFO -   ✅ test_commit_nonexistent_xid: PASSED
+2025-12-20 17:13:44,719 - INFO -   ✅ test_abort_nonexistent_xid: PASSED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_double_commit: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_commit_after_abort: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_abort_idempotent: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_mixed_add_delete_query: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_read_own_write: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_read_after_delete: FAILED
+2025-12-20 17:13:44,719 - INFO -   ✅ test_hotspot_key_high_concurrency: PASSED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_uniform_key_low_conflict: FAILED
+2025-12-20 17:13:44,719 - INFO -   ❌ test_mixed_operations_high_concurrency: FAILED
+2025-12-20 17:13:44,719 - INFO - 
+⚠️ 24 tests failed
+2025-12-20 17:13:44,720 - INFO - ============================================================
