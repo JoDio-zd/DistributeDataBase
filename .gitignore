@@ -14,4 +14,4 @@ data/
 .DS_Store
 .pycache
 .claude
-.logs
+logs
