@@ -40,8 +40,8 @@ page_index = DirectPageIndex(
 
 page_io = MySQLMultiIndexPageIO(
     conn=conn,
-    table="HOTELS",
-    key_column="location",
+    table="RESERVATIONS",
+    key_column="custName|resvType|resvKey",
     page_index=page_index,
 )
 
@@ -109,7 +109,7 @@ def insert_record(req: InsertRequest):
     )
 
     # RM 层仍然只认一个 key
-    record["__rm_key__"] = key
+    record["custName|resvType|resvKey"] = key
 
     res = rm.insert(req.xid, record)
     handle_rm_result(res)

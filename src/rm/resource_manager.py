@@ -112,7 +112,7 @@ class ResourceManager:
                 xid, key
             )
             return RMResult(ok=False, err=ErrCode.KEY_EXISTS)
-        record = Record(record, version=xid)
+        record = Record(record, version=None)
         self.shadow_pool.put_record(xid, key, record)
         logger.info(
             "RM.insert success: xid=%s key=%s version=%s",

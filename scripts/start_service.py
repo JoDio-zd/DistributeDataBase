@@ -1,115 +1,164 @@
 import subprocess
 import os
 import sys
+import threading
+import time
+import signal
 
-cmd0 = [
+# =========================
+# 环境变量（关键）
+# =========================
+env = os.environ.copy()
+env["PYTHONUNBUFFERED"] = "1"
+
+# =========================
+# 颜色配置
+# =========================
+COLORS = {
+    "tm": "\033[95m",          # 紫
+    "flight": "\033[94m",      # 蓝
+    "hotel": "\033[96m",       # 青
+    "car": "\033[92m",         # 绿
+    "customer": "\033[93m",    # 黄
+    "reservation": "\033[91m", # 红
+    "reset": "\033[0m",
+}
+
+# =========================
+# 服务配置
+# =========================
+SERVICES = {
+    "tm": {
+        "app": "src.tm.transaction_manager:app",
+        "port": "9001",
+    },
+    "flight": {
+        "app": "src.rms.service.flight_service:app",
+        "port": "8001",
+    },
+    "hotel": {
+        "app": "src.rms.service.hotel_service:app",
+        "port": "8002",
+    },
+    "car": {
+        "app": "src.rms.service.car_service:app",
+        "port": "8003",
+    },
+    "customer": {
+        "app": "src.rms.service.customer_service:app",
+        "port": "8004",
+    },
+    "reservation": {
+        "app": "src.rms.service.reservation_service:app",
+        "port": "8005",
+    },
+}
+
+BASE_CMD = [
     "uvicorn",
-    "src.tm.transaction_manager:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "9001",
-    "--reload",
+    "--host", "0.0.0.0",
+    "--log-level", "info",
+    # 不开 reload，避免子进程干扰日志
 ]
 
-cmd1 = [
-    "uvicorn",
-    "src.rms.service.flight_service:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "8001",
-    "--reload",
-]
+# =========================
+# 启动单个服务
+# =========================
+def start_service(name):
+    cfg = SERVICES[name]
+    color = COLORS.get(name, "")
+    reset = COLORS["reset"]
 
-cmd2 = [
-    "uvicorn",
-    "src.rms.service.hotel_service:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "8002",
-    "--reload",
-]
+    cmd = BASE_CMD + [
+        cfg["app"],
+        "--port", cfg["port"],
+    ]
 
-cmd3 = [
-    "uvicorn",
-    "src.rms.service.car_service:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "8003",
-    "--reload",
-]
+    print(f"{color}[START] {name:<12} → {cfg['port']}{reset}")
 
-cmd4 = [
-    "uvicorn",
-    "src.rms.service.customer_service:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "8004",
-    "--reload",
-]
+    proc = subprocess.Popen(
+        cmd,
+        cwd=os.getcwd(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env,
+    )
+    return proc, name
 
-cmd5 = [
-    "uvicorn",
-    "src.rms.service.reservation_service:app",
-    "--host",
-    "0.0.0.0",
-    "--port",
-    "8005",
-    "--reload",
-]
 
-def a0():
-    subprocess.run(cmd0, cwd=os.getcwd())
-
-def a1():
-    subprocess.run(cmd1, cwd=os.getcwd())
-
-def a2():
-    subprocess.run(cmd2, cwd=os.getcwd())
-
-def a3():
-    subprocess.run(cmd3, cwd=os.getcwd())
-
-def a4():
-    subprocess.run(cmd4, cwd=os.getcwd())
-
-def a5():
-    subprocess.run(cmd5, cwd=os.getcwd())
-
-def all_services():
-    procs = []
-    for cmd in [cmd0, cmd1, cmd2, cmd3, cmd4, cmd5]:
-        procs.append(
-            subprocess.Popen(cmd, cwd=os.getcwd())
-        )
+# =========================
+# 日志读取线程（关键）
+# =========================
+def stream_logs(proc, name):
+    color = COLORS.get(name, "")
+    reset = COLORS["reset"]
 
     try:
-        for p in procs:
-            p.wait()
+        for line in proc.stdout:
+            print(f"{color}[{name.upper():<11}] {line.rstrip()}{reset}")
+    except Exception as e:
+        print(f"[{name}] log stream error: {e}")
+
+
+# =========================
+# 启动多个服务
+# =========================
+def start_many(names):
+    procs = []
+
+    try:
+        for name in names:
+            p, svc = start_service(name)
+            procs.append((p, svc))
+
+            t = threading.Thread(
+                target=stream_logs,
+                args=(p, svc),
+                daemon=True,
+            )
+            t.start()
+
+        print("\nAll services started. Ctrl+C to stop.\n")
+
+        # 主线程只负责活着
+        while True:
+            time.sleep(1)
+
     except KeyboardInterrupt:
-        for p in procs:
-            p.terminate()
+        print("\nStopping all services...")
+
+    finally:
+        for p, _ in procs:
+            try:
+                p.send_signal(signal.SIGTERM)
+            except Exception:
+                pass
+
+        for p, _ in procs:
+            try:
+                p.wait(timeout=5)
+            except Exception:
+                p.kill()
+
+        print("All services stopped.")
 
 
+# =========================
+# CLI 入口
+# =========================
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        all_services()
-        sys.exit(0)
-    if sys.argv[1] == "0":
-        a0()
-    elif sys.argv[1] == "1":
-        a1()
-    elif sys.argv[1] == "2":
-        a2()
-    elif sys.argv[1] == "3":
-        a3()
-    elif sys.argv[1] == "4":
-        a4()
-    elif sys.argv[1] == "5":
-        a5()
+    mode = sys.argv[1] if len(sys.argv) > 1 else "up"
+
+    if mode == "up":
+        start_many(SERVICES.keys())
+    elif mode == "rm":
+        start_many(k for k in SERVICES if k != "tm")
+    elif mode in SERVICES:
+        start_many([mode])
     else:
-        all_services()
+        print("Usage:")
+        print("  python start_service.py up")
+        print("  python start_service.py rm")
+        print("  python start_service.py tm|flight|hotel|car|customer|reservation")

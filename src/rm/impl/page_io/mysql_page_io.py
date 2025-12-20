@@ -1,8 +1,11 @@
 import pymysql
-from typing import Tuple
+import logging
 from src.rm.base.page_io import PageIO
 from src.rm.base.page_index import PageIndex
 from src.rm.base.page import Page, Record
+
+logger = logging.getLogger("rm")
+
 
 class MySQLPageIO(PageIO):
     def __init__(
@@ -23,8 +26,23 @@ class MySQLPageIO(PageIO):
         self.key_column = key_column
         self.page_index = page_index
 
+        logger.info(
+            "PageIO initialized: table=%s key=%s index=%s",
+            table,
+            key_column,
+            type(page_index).__name__,
+        )
+
+    # =========================================================
+    # Page In
+    # =========================================================
     def page_in(self, page_id) -> Page:
         start, end = self.page_index.page_to_range(page_id)
+
+        logger.debug(
+            "PageIO.page_in: page=%s range=[%s, %s]",
+            page_id, start, end
+        )
 
         sql = f"""
             SELECT *
@@ -35,24 +53,35 @@ class MySQLPageIO(PageIO):
         cursor = self.conn.cursor()
         cursor.execute(sql, (start, end))
         rows = cursor.fetchall()
-        records = {row[self.key_column]: Record(row) for row in rows}
+
+        records = {
+            row[self.key_column]: Record(row)
+            for row in rows
+        }
+
+        logger.info(
+            "PageIO.page_in done: page=%s records=%d",
+            page_id, len(records)
+        )
+
         return Page(page_id=page_id, records=records)
 
+    # =========================================================
+    # Page Out
+    # =========================================================
     def page_out(self, page: Page) -> None:
         """
         Persist page records back to database.
-
-        Assumptions:
-        - page.records is a dict: {key -> record}
-        - record is a dict of column -> value
-        - Primary key is included in record
         """
         if not page.records:
+            logger.debug(
+                "PageIO.page_out skip: page=%s (empty)",
+                page.page_id
+            )
             return
 
         cursor = self.conn.cursor()
 
-        # 所有 record 共享同一列结构
         sample_record = next(iter(page.records.values()))
         columns = list(sample_record.keys())
 
@@ -73,7 +102,17 @@ class MySQLPageIO(PageIO):
             for record in page.records.values()
         ]
 
+        logger.info(
+            "PageIO.page_out upsert: page=%s count=%d",
+            page.page_id, len(values)
+        )
+
+        logger.debug("Upsert SQL: %s", sql)
+
         cursor.executemany(sql, values)
         self.conn.commit()
 
-
+        logger.info(
+            "PageIO.page_out done: page=%s",
+            page.page_id
+        )

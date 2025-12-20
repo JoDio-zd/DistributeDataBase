@@ -43,7 +43,7 @@ page_index = OrderedStringPageIndex(
 
 page_io = MySQLPageIO(
     conn=conn,
-    table="HOTELS",
+    table="CARS",
     key_column="location",
     page_index=page_index,
 )

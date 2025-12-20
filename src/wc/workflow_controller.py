@@ -73,7 +73,7 @@ class WC:
             return None
         return r.json().get("record")
 
-    def reserveFlight(self, xid: int, custName, flightNum, seats=1):
+    def reserveFlight(self, xid: int, custName, flightNum):
         # 1. 校验客户存在
         cust = self.queryCustomer(xid, custName)
         if cust is None:
@@ -83,23 +83,23 @@ class WC:
         flight = self.queryFlight(xid, flightNum)
         if flight is None:
             raise RuntimeError("flight not found")
-        if flight["numAvail"] < seats:
-            raise RuntimeError("not enough seats")
+        if flight["numAvail"] < 1:
+            raise RuntimeError("no available seats")
 
-        # 3. 扣减航班余量
+        # 3. 扣减 1 个座位
         r = requests.put(
             f"{self.flight_rm}/records/{flightNum}",
             json={
                 "xid": xid,
                 "updates": {
-                    "numAvail": flight["numAvail"] - seats
+                    "numAvail": flight["numAvail"] - 1
                 },
             },
         )
         if r.status_code != 200:
             raise RuntimeError(r.text)
 
-        # 4. 创建 reservation 记录
+        # 4. 创建 reservation（唯一）
         r = requests.post(
             f"{self.reservation_rm}/records",
             json={
@@ -108,7 +108,6 @@ class WC:
                     "custName": custName,
                     "resvType": "FLIGHT",
                     "resvKey": flightNum,
-                    "count": seats,
                 },
             },
         )
@@ -152,7 +151,7 @@ class WC:
             return None
         return r.json().get("record")
 
-    def reserveHotel(self, xid: int, custName, location, rooms=1):
+    def reserveHotel(self, xid: int, custName, location):
         cust = self.queryCustomer(xid, custName)
         if cust is None:
             raise RuntimeError("customer not found")
@@ -160,15 +159,15 @@ class WC:
         hotel = self.queryHotel(xid, location)
         if hotel is None:
             raise RuntimeError("hotel not found")
-        if hotel["numAvail"] < rooms:
-            raise RuntimeError("not enough rooms")
+        if hotel["numAvail"] < 1:
+            raise RuntimeError("no available rooms")
 
         r = requests.put(
             f"{self.hotel_rm}/records/{location}",
             json={
                 "xid": xid,
                 "updates": {
-                    "numAvail": hotel["numAvail"] - rooms
+                    "numAvail": hotel["numAvail"] - 1
                 },
             },
         )
@@ -183,12 +182,12 @@ class WC:
                     "custName": custName,
                     "resvType": "HOTEL",
                     "resvKey": location,
-                    "count": rooms,
                 },
             },
         )
         if r.status_code != 200:
             raise RuntimeError(r.text)
+
 
     # =========================================================
     # Car APIs
@@ -227,7 +226,7 @@ class WC:
             return None
         return r.json().get("record")
 
-    def reserveCar(self, xid: int, custName, location, cars=1):
+    def reserveCar(self, xid: int, custName, location):
         cust = self.queryCustomer(xid, custName)
         if cust is None:
             raise RuntimeError("customer not found")
@@ -235,15 +234,15 @@ class WC:
         car = self.queryCar(xid, location)
         if car is None:
             raise RuntimeError("car location not found")
-        if car["numAvail"] < cars:
-            raise RuntimeError("not enough cars")
+        if car["numAvail"] < 1:
+            raise RuntimeError("no available cars")
 
         r = requests.put(
             f"{self.car_rm}/records/{location}",
             json={
                 "xid": xid,
                 "updates": {
-                    "numAvail": car["numAvail"] - cars
+                    "numAvail": car["numAvail"] - 1
                 },
             },
         )
@@ -258,12 +257,12 @@ class WC:
                     "custName": custName,
                     "resvType": "CAR",
                     "resvKey": location,
-                    "count": cars,
                 },
             },
         )
         if r.status_code != 200:
             raise RuntimeError(r.text)
+
 
     # =========================================================
     # Customer APIs
@@ -275,8 +274,7 @@ class WC:
             json={
                 "xid": xid,
                 "record": {
-                    "custId": custId,
-                    "reservations": [],
+                    "custName": custId,
                 },
             },
         )
