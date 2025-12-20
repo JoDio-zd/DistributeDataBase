@@ -56,17 +56,20 @@ rm = ResourceManager(
     key_width=key_width,
 )
 
+
 def enlist(req):
     requests.request(
         "POST",
-        "http://127.0.0.1:9000/txn/enlist",
+        "http://127.0.0.1:9001/txn/enlist",
         json={"xid": req.xid, "rm": "http://127.0.0.1:8003"},
         timeout=3,
     )
 
+
 # -----------------------------
 # CRUD APIs
 # -----------------------------
+
 
 @app.get("/records/{key}")
 def read_record(key: str, xid: int):
@@ -98,9 +101,11 @@ def delete_record(key: str, xid: int):
     enlist(TxnRequest(xid=xid))
     return {"ok": True}
 
+
 # -----------------------------
 # 2PC APIs
 # -----------------------------
+
 
 @app.post("/txn/prepare")
 def prepare_txn(req: TxnRequest):
@@ -126,9 +131,11 @@ def abort_txn(req: TxnRequest):
     handle_rm_result(res)
     return {"ok": True}
 
+
 # -----------------------------
 # Ops APIs
 # -----------------------------
+
 
 @app.get("/health")
 def health():

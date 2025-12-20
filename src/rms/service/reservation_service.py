@@ -53,17 +53,20 @@ rm = ResourceManager(
     key_width=key_width,
 )
 
+
 def enlist(req: TxnRequest):
     requests.request(
         "POST",
-        "http://127.0.0.1:9000/txn/enlist",
+        "http://127.0.0.1:9001/txn/enlist",
         json={"xid": req.xid, "rm": "http://127.0.0.1:8005"},
         timeout=3,
     )
 
+
 # -----------------------------
 # Key Encoding / Decoding
 # -----------------------------
+
 
 # custName|resvType|resvKey
 # Len(10)|Len(6)|Len(10) = 26
@@ -73,9 +76,11 @@ def encode_key(cust_name: str, resv_type: str, resv_key: str) -> str:
     resv_key = resv_key.zfill(10)[:10]
     return f"{cust_name}|{resv_type}|{resv_key}"
 
+
 # -----------------------------
 # CRUD APIs
 # -----------------------------
+
 
 @app.get("/records")
 def read_record(
@@ -144,9 +149,11 @@ def delete_record(
     enlist(TxnRequest(xid=xid))
     return {"ok": True}
 
+
 # -----------------------------
 # 2PC APIs
 # -----------------------------
+
 
 @app.post("/txn/prepare")
 def prepare_txn(req: TxnRequest):
@@ -172,9 +179,11 @@ def abort_txn(req: TxnRequest):
     handle_rm_result(res)
     return {"ok": True}
 
+
 # -----------------------------
 # Ops APIs
 # -----------------------------
+
 
 @app.get("/health")
 def health():

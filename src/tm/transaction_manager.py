@@ -5,31 +5,33 @@ import threading
 import requests
 import os
 
-# port = 9000
+# port = 9001
 app = FastAPI(title="Transaction Manager Service")
 
 # =========================================================
 # Data model
 # =========================================================
 
+
 class Txn:
     def __init__(self):
-        self.state = "ACTIVE"          # ACTIVE | COMMITTED | ABORTED
+        self.state = "ACTIVE"  # ACTIVE | COMMITTED | ABORTED
         self.rms: Set[str] = set()
 
 
 transactions: Dict[int, Txn] = {}
 _next_xid = 1
-_lock = threading.Lock()   # protect xid + transactions
+_lock = threading.Lock()  # protect xid + transactions
 
 
 # =========================================================
 # Request models
 # =========================================================
 
+
 class EnlistRequest(BaseModel):
     xid: int
-    rm: str   # RM service base URL, e.g. http://127.0.0.1:8001
+    rm: str  # RM service base URL, e.g. http://127.0.0.1:8001
 
 
 class TxnRequest(BaseModel):
@@ -39,6 +41,7 @@ class TxnRequest(BaseModel):
 # =========================================================
 # APIs for WC (client)
 # =========================================================
+
 
 @app.post("/txn/start")
 def start_txn():
@@ -58,10 +61,7 @@ def commit_txn(req: TxnRequest):
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     if txn.state != "ACTIVE":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Transaction already {txn.state}"
-        )
+        raise HTTPException(status_code=409, detail=f"Transaction already {txn.state}")
 
     # ---------- Phase 1: prepare ----------
     for rm in txn.rms:
@@ -106,6 +106,7 @@ def abort_txn(req: TxnRequest):
 # API for RM Service (enlist)
 # =========================================================
 
+
 @app.post("/txn/enlist")
 def enlist(req: EnlistRequest):
     xid = req.xid
@@ -114,18 +115,16 @@ def enlist(req: EnlistRequest):
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     if txn.state != "ACTIVE":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Transaction already {txn.state}"
-        )
+        raise HTTPException(status_code=409, detail=f"Transaction already {txn.state}")
 
-    txn.rms.add(req.rm)   # set 保证幂等
+    txn.rms.add(req.rm)  # set 保证幂等
     return {"ok": True}
 
 
 # =========================================================
 # Ops
 # =========================================================
+
 
 @app.get("/health")
 def health():
@@ -141,11 +140,12 @@ def die():
 # Helpers (never throw)
 # =========================================================
 
+
 def _safe_commit(rm: str, xid: int):
     try:
         requests.post(f"{rm}/txn/commit", json={"xid": xid}, timeout=3)
     except Exception:
-        pass   # 2PC 语义下：commit 阶段不回滚
+        pass  # 2PC 语义下：commit 阶段不回滚
 
 
 def _safe_abort(rm: str, xid: int):

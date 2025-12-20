@@ -8,7 +8,7 @@ cmd0 = [
     "--host",
     "0.0.0.0",
     "--port",
-    "9000",
+    "9001",
     "--reload",
 ]
 
@@ -52,20 +52,26 @@ cmd4 = [
     "--reload",
 ]
 
+
 def a0():
     subprocess.run(cmd0, cwd=os.getcwd())
+
 
 def a1():
     subprocess.run(cmd1, cwd=os.getcwd())
 
+
 def a2():
     subprocess.run(cmd2, cwd=os.getcwd())
+
 
 def a3():
     subprocess.run(cmd3, cwd=os.getcwd())
 
+
 def a4():
     subprocess.run(cmd4, cwd=os.getcwd())
+
 
 if __name__ == "__main__":
     if sys.argv[1] == "0":

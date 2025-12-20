@@ -4,7 +4,7 @@ import requests
 class WC:
     def __init__(
         self,
-        tm_url="http://127.0.0.1:9000",
+        tm_url="http://127.0.0.1:9001",
         flight_rm_url="http://127.0.0.1:8001",
         hotel_rm_url="http://127.0.0.1:8002",
         car_rm_url="http://127.0.0.1:8003",
@@ -91,9 +91,7 @@ class WC:
             f"{self.flight_rm}/records/{flightNum}",
             json={
                 "xid": xid,
-                "updates": {
-                    "numAvail": flight["numAvail"] - seats
-                },
+                "updates": {"numAvail": flight["numAvail"] - seats},
             },
         )
         if r.status_code != 200:
@@ -167,9 +165,7 @@ class WC:
             f"{self.hotel_rm}/records/{location}",
             json={
                 "xid": xid,
-                "updates": {
-                    "numAvail": hotel["numAvail"] - rooms
-                },
+                "updates": {"numAvail": hotel["numAvail"] - rooms},
             },
         )
         if r.status_code != 200:
@@ -242,9 +238,7 @@ class WC:
             f"{self.car_rm}/records/{location}",
             json={
                 "xid": xid,
-                "updates": {
-                    "numAvail": car["numAvail"] - cars
-                },
+                "updates": {"numAvail": car["numAvail"] - cars},
             },
         )
         if r.status_code != 200:
