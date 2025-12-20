@@ -96,6 +96,9 @@ def all_services():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        all_services()
+        sys.exit(0)
     if sys.argv[1] == "0":
         a0()
     elif sys.argv[1] == "1":
@@ -108,3 +111,5 @@ if __name__ == "__main__":
         a4()
     elif sys.argv[1] == "5":
         a5()
+    else:
+        all_services()

@@ -1,7 +1,7 @@
-from src.rm.impl.mysql_page_io import MySQLPageIO
+from src.rm.impl.page_io.mysql_page_io import MySQLPageIO
 from src.rm.impl.committed_page_pool import CommittedPagePool
 from src.rm.impl.simple_shadow_record_pool import SimpleShadowRecordPool
-from src.rm.impl.order_string_page_index import OrderedStringPageIndex
+from src.rm.impl.page_index.order_string_page_index import OrderedStringPageIndex
 from src.rm.base.page import Record
 from src.rm.impl.lock_manager import RowLockManager
 from src.rm.base.err_code import RMResult, ErrCode
