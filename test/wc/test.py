@@ -27,15 +27,13 @@ os.makedirs(log_dir, exist_ok=True)
 # 配置日志 - 只输出关键信息
 log_file = os.path.join(log_dir, f"wc_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
-# 创建自定义格式器
-class KeyInfoFormatter(logging.Formatter):
-    """只输出关键信息的格式器"""
-    def format(self, record):
-        # 只格式化关键消息（✅、❌、Summary等）
+# 创建自定义过滤器（用于控制台）
+class KeyInfoFilter(logging.Filter):
+    """只保留关键信息的过滤器"""
+    def filter(self, record):
         msg = record.getMessage()
-        if any(x in msg for x in ['✅', '❌', 'SUMMARY', 'Category', '===', 'Running:', 'PASSED', 'FAILED']):
-            return f"{msg}"
-        return None
+        # 只保留包含关键标记的消息
+        return any(x in msg for x in ['✅', '❌', 'SUMMARY', 'Category', '===', '---', 'Running:', 'PASSED', 'FAILED', 'Total', 'Success Rate', '⚠️'])
 
 # 文件处理器 - 记录所有信息
 file_handler = logging.FileHandler(log_file, encoding='utf-8')
@@ -45,7 +43,8 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(mes
 # 控制台处理器 - 只显示关键信息
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
-console_handler.setFormatter(KeyInfoFormatter())
+console_handler.setFormatter(logging.Formatter('%(message)s'))
+console_handler.addFilter(KeyInfoFilter())
 
 # 配置 logger
 logger = logging.getLogger(__name__)
