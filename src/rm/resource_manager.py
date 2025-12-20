@@ -15,35 +15,31 @@ class ResourceManager:
     def __init__(
         self,
         *,
-        db_conn,
+        page_index,
+        page_io,
         table: str,
         key_column: str,
-        page_size: int = 2,
         key_width: int = 4,
     ):
         # Publicly invisible configuration
-        self.table = table
         self.key_field = key_column
         self.key_width = key_width
 
-        # Internal components (implementation details)
-        # These are intentionally hidden from RM users.
-        self.page_index = OrderedStringPageIndex(page_size, key_width)
-        self.page_io = MySQLPageIO(
-            conn=db_conn,
-            table=table,
-            key_column=key_column,
-            page_index=self.page_index,
-        )
+        self.page_index = page_index
+        self.page_io = page_io
 
         self.committed_pool = CommittedPagePool()
         self.shadow_pool = SimpleShadowRecordPool()
         self.global_last_commit_xid = 0
         self.txn_start_xid: dict[int, dict[str, int]] = {}
         self.locker = RowLockManager()
+
         logger.info(
-            "ResourceManager initialized: table=%s, key=%s, page_size=%d, key_width=%d",
-            table, key_column, page_size, key_width
+            "ResourceManager initialized: table=%s, key=%s, index=%s, io=%s",
+            table,
+            key_column,
+            type(page_index).__name__,
+            type(page_io).__name__,
         )
 
     # =========================================================

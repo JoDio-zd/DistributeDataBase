@@ -1,6 +1,8 @@
 # src/rms/hotel_rm_service.py
 from fastapi import FastAPI
 from src.rm.resource_manager import ResourceManager
+from src.rm.impl.mysql_page_io import MySQLPageIO
+from src.rm.impl.order_string_page_index import OrderedStringPageIndex
 from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
 import pymysql
 import os
@@ -30,11 +32,27 @@ conn = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor,
 )
 
-rm = ResourceManager(
-    db_conn=conn,
+page_size = 2
+key_width = 4
+
+page_index = OrderedStringPageIndex(
+    page_size=page_size,
+    key_width=key_width,
+)
+
+page_io = MySQLPageIO(
+    conn=conn,
     table="HOTELS",
     key_column="location",
-    page_size=2,
+    page_index=page_index,
+)
+
+rm = ResourceManager(
+    page_index=page_index,
+    page_io=page_io,
+    table="HOTELS",
+    key_column="location",
+    key_width=key_width,
 )
 
 def enlist(req):

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from src.rm.resource_manager import ResourceManager
 from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
+from src.rm.impl.mysql_page_io import MySQLPageIO
+from src.rm.impl.order_string_page_index import OrderedStringPageIndex
 import pymysql
 import os
 import requests
@@ -20,7 +22,7 @@ app = FastAPI(title="Reservation RM Service")
 
 conn = pymysql.connect(
     host="127.0.0.1",
-    port=33062,
+    port=33064,
     user="root",
     password="1234",
     database="rm_db",
@@ -28,18 +30,34 @@ conn = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor,
 )
 
+page_size = 16
+key_width = 26
+
+page_index = OrderedStringPageIndex(
+    page_size=page_size,
+    key_width=key_width,
+)
+
+page_io = MySQLPageIO(
+    conn=conn,
+    table="HOTELS",
+    key_column="location",
+    page_index=page_index,
+)
+
 rm = ResourceManager(
-    db_conn=conn,
+    page_index=page_index,
+    page_io=page_io,
     table="RESERVATIONS",
-    key_column="__rm_key__",   # 逻辑 key，占位用
-    page_size=2,
+    key_column="custName|resvType|resvKey",
+    key_width=key_width,
 )
 
 def enlist(req: TxnRequest):
     requests.request(
         "POST",
         "http://127.0.0.1:9000/txn/enlist",
-        json={"xid": req.xid, "rm": "http://127.0.0.1:8003"},
+        json={"xid": req.xid, "rm": "http://127.0.0.1:8005"},
         timeout=3,
     )
 
@@ -47,7 +65,12 @@ def enlist(req: TxnRequest):
 # Key Encoding / Decoding
 # -----------------------------
 
+# custName|resvType|resvKey
+# Len(10)|Len(6)|Len(10) = 26
 def encode_key(cust_name: str, resv_type: str, resv_key: str) -> str:
+    cust_name = cust_name.zfill(10)[:10]
+    resv_type = resv_type.ljust(6)[:6]
+    resv_key = resv_key.zfill(10)[:10]
     return f"{cust_name}|{resv_type}|{resv_key}"
 
 # -----------------------------
