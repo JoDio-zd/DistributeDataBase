@@ -1,14 +1,16 @@
 # src/rms/hotel_rm_service.py
-from fastapi import FastAPI
-from src.rm.resource_manager import ResourceManager
-from src.rm.impl.page_io.mysql_page_io import MySQLPageIO
-from src.rm.impl.page_index.order_string_page_index import OrderedStringPageIndex
-from src.rms.models.models import InsertRequest, UpdateRequest, TxnRequest
-import pymysql
-import os
-import requests
-from src.rms.base.err_handle import handle_rm_result
 import logging
+import os
+
+import pymysql
+import requests
+from fastapi import FastAPI
+
+from src.rm.impl.page_index.order_string_page_index import OrderedStringPageIndex
+from src.rm.impl.page_io.mysql_page_io import MySQLPageIO
+from src.rm.resource_manager import ResourceManager
+from src.rms.base.err_handle import handle_rm_result
+from src.rms.models.models import InsertRequest, TxnRequest, UpdateRequest
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -59,7 +61,7 @@ rm = ResourceManager(
 def enlist(req):
     requests.request(
         "POST",
-        "http://127.0.0.1:1/txn/enlist",
+        "http://127.0.0.1:9001/txn/enlist",
         json={"xid": req.xid, "rm": "http://127.0.0.1:8002"},
         timeout=3,
     )
@@ -142,5 +144,9 @@ def health():
 
 
 @app.post("/shutdown")
+def shutdown():
+    os._exit(0)
+
+
 def shutdown():
     os._exit(0)

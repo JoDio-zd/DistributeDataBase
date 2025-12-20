@@ -1,5 +1,5 @@
-import subprocess
 import os
+import subprocess
 import sys
 
 cmd0 = [
@@ -52,6 +52,16 @@ cmd4 = [
     "--reload",
 ]
 
+cmd5 = [
+    "uvicorn",
+    "src.rms.service.reservation_service:app",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8005",
+    "--reload",
+]
+
 
 def a0():
     subprocess.run(cmd0, cwd=os.getcwd())
@@ -73,7 +83,27 @@ def a4():
     subprocess.run(cmd4, cwd=os.getcwd())
 
 
+def a5():
+    subprocess.run(cmd5, cwd=os.getcwd())
+
+
+def all_services():
+    procs = []
+    for cmd in [cmd0, cmd1, cmd2, cmd3, cmd4, cmd5]:
+        procs.append(subprocess.Popen(cmd, cwd=os.getcwd()))
+
+    try:
+        for p in procs:
+            p.wait()
+    except KeyboardInterrupt:
+        for p in procs:
+            p.terminate()
+
+
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        all_services()
+        sys.exit(0)
     if sys.argv[1] == "0":
         a0()
     elif sys.argv[1] == "1":
@@ -84,3 +114,7 @@ if __name__ == "__main__":
         a3()
     elif sys.argv[1] == "4":
         a4()
+    elif sys.argv[1] == "5":
+        a5()
+    else:
+        all_services()
