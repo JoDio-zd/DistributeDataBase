@@ -11,4 +11,5 @@ wheels/
 
 data/
 .vscode/
+rm_txn_state/
 .DS_Store

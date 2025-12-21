@@ -7,7 +7,11 @@ from src.rm.impl.lock_manager import RowLockManager
 from src.rm.base.err_code import RMResult, ErrCode
 from src.rm.base.page_io import PageIO
 from src.rm.base.page_index import PageIndex
+import os
 import logging
+from typing import Any
+import json
+import tempfile
 
 logger = logging.getLogger("rm")
 
@@ -24,6 +28,7 @@ class ResourceManager:
         key_width: int = 4,
     ):
         # Publicly invisible configuration
+        self.table = table
         self.key_field = key_column
         self.key_width = key_width
 
@@ -40,6 +45,9 @@ class ResourceManager:
         self.prepared_txns: set[int] = set()
         self.committed_txns: set[int] = set()
         self.aborted_txns: set[int] = set()
+        self.state_dir = "rm_txn_state/"
+        self.state_path = os.path.join(self.state_dir, f"{table}_rm_state.json")
+        self.recover()
 
         logger.info(
             "ResourceManager initialized: table=%s, key=%s, index=%s, io=%s",
@@ -93,7 +101,98 @@ class ResourceManager:
             "RM.get_start_version: xid=%s key=%s start_version=None", xid, key
         )
         return None
+    
+    def _ensure_state_dir(self):
+        os.makedirs(self.state_dir, exist_ok=True)
 
+    def _load_state_file(self) -> dict[str, Any]:
+        """
+        State file schema (recommended minimal):
+        {
+          "prepared": {
+            "<xid>": {
+              "records": {
+                "<key>": {"data": {...}, "deleted": false, "version": 123},
+                ...
+              }
+            },
+            ...
+          }
+        }
+        """
+        self._ensure_state_dir()
+        if not os.path.exists(self.state_path):
+            return {"prepared": {}}
+        try:
+            with open(self.state_path, "r", encoding="utf-8") as f:
+                obj = json.load(f)
+            if not isinstance(obj, dict):
+                return {"prepared": {}}
+            obj.setdefault("prepared", {})
+            if not isinstance(obj["prepared"], dict):
+                obj["prepared"] = {}
+            return obj
+        except Exception as e:
+            logger.exception("RM.state load failed, treat as empty. path=%s err=%s", self.state_path, e)
+            return {"prepared": {}}
+    
+    def _atomic_write_json(self, obj: dict[str, Any], path: str):
+        """
+        Atomic write: write temp -> fsync -> replace.
+        """
+        self._ensure_state_dir()
+        d = os.path.dirname(path)
+        fd, tmp_path = tempfile.mkstemp(prefix=".tmp_rm_state_", dir=d)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, path)
+        finally:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
+
+    def _persist_prepared_shadow(self, xid: int):
+        """
+        Persist the prepared shadow records of xid.
+        Call this ONLY when prepare is successful and BEFORE returning OK to TM
+        if you want "prepared implies commit is doable after crash".
+        """
+        shadow = self.shadow_pool.get_records(xid) or {}
+        state = self._load_state_file()
+
+        xid_s = str(xid)
+        recs: dict[str, Any] = {}
+        for k, r in shadow.items():
+            key = k.zfill(self.key_width)
+            # r behaves like Record: dict-like + attrs deleted/version
+            # we persist only what's needed to re-create shadow records.
+            recs[key] = {
+                "data": dict(r),  # copy underlying dict fields
+                "deleted": bool(getattr(r, "deleted", False)),
+                "version": int(getattr(r, "version", xid)),
+            }
+
+        state["prepared"][xid_s] = {"records": recs}
+        self._atomic_write_json(state, self.state_path)
+
+    def _clear_persisted_txn(self, xid: int):
+        """
+        Remove xid from state file when txn is fully resolved (commit/abort).
+        """
+        state = self._load_state_file()
+        xid_s = str(xid)
+        if xid_s in state.get("prepared", {}):
+            state["prepared"].pop(xid_s, None)
+            self._atomic_write_json(state, self.state_path)
+
+    # =========================================================
+    # function
+    # =========================================================
     def read(self, xid: int, key):
         if xid in self.prepared_txns or xid in self.committed_txns or xid in self.aborted_txns:
             logger.warning(
@@ -274,6 +373,15 @@ class ResourceManager:
                             xid, key_
                         )
                         return RMResult(ok=False, err=ErrCode.READ_WRITE_CONFLICT)
+        try:
+            self._persist_prepared_shadow(xid)
+        except Exception:
+            self.locker.unlock_all(xid)
+            self.shadow_pool.remove_txn(xid)
+            self.txn_start_xid.pop(xid, None)
+            self._clear_persisted_txn(xid)
+            return RMResult(ok=False, err=ErrCode.INTERNAL_INVARIANT)
+        
         logger.info(
             "RM.prepare success: xid=%s keys=%s",
             xid, list(shadow.keys())
@@ -321,6 +429,7 @@ class ResourceManager:
         logger.info("RM.commit done: xid=%s", xid)
         self.prepared_txns.discard(xid)
         self.committed_txns.add(xid)
+        self._clear_persisted_txn(xid)
         return RMResult(ok=True, value=None)
 
     def abort(self, xid: int) -> None:
@@ -344,5 +453,72 @@ class ResourceManager:
         logger.info("RM.abort: xid=%s", xid)
         self.prepared_txns.discard(xid)
         self.aborted_txns.add(xid)
-
+        self._clear_persisted_txn(xid)
         return RMResult(ok=True, value=None)
+    
+    def recover(self):
+        """
+        Crash recovery for RM.
+
+        Goal:
+          - restore PREPARED-but-undecided transactions:
+              * reload their shadow records into shadow_pool
+              * mark them as prepared_txns
+              * re-acquire write locks on involved keys
+          - DO NOT re-run semantic/version validation (do NOT "prepare again")
+          - must be invoked BEFORE the RM starts serving new requests
+        """
+        state = self._load_state_file()
+        prepared: dict[str, Any] = state.get("prepared", {})
+        if not prepared:
+            logger.info("RM.recover: no prepared txns. table=%s", getattr(self, "table", ""))
+            return
+
+        logger.warning("RM.recover: start, prepared_txns=%d path=%s", len(prepared), self.state_path)
+
+        # Recover each prepared xid
+        for xid_s, info in prepared.items():
+            try:
+                xid = int(xid_s)
+            except ValueError:
+                logger.warning("RM.recover: skip invalid xid key=%s", xid_s)
+                continue
+
+            # Rebuild shadow records
+            records = (info or {}).get("records", {}) or {}
+            if not isinstance(records, dict):
+                logger.warning("RM.recover: xid=%s records malformed, skip", xid)
+                continue
+
+            # Load shadow records into shadow_pool
+            keys = sorted(k.zfill(self.key_width) for k in records.keys())
+            for key in keys:
+                payload = records.get(key, {})
+                data = payload.get("data", {}) or {}
+                deleted = bool(payload.get("deleted", False))
+                version = int(payload.get("version", xid))
+
+                rec = Record(dict(data), version=version)
+                rec.deleted = deleted
+                # 注意：insert/update/delete 都是通过 shadow_pool 来提供 commit 输入
+                self.shadow_pool.put_record(xid, key, rec)
+
+            # Mark prepared (in-memory)
+            self.prepared_txns.add(xid)
+
+            # Re-acquire locks for this prepared transaction.
+            # Important: do NOT validate versions/semantics again.
+            for key in keys:
+                if not self.locker.try_lock(key, xid):
+                    # 这个情况通常只会发生在“恢复时已经开始对外服务”的错误启动顺序
+                    # 或者锁管理器本身不是“空状态启动”。
+                    logger.critical(
+                        "RM.recover: lock acquisition failed for prepared txn. xid=%s key=%s. "
+                        "Refuse to serve to avoid violating 2PC semantics.",
+                        xid, key
+                    )
+                    raise RuntimeError(f"RM recovery lock failed: xid={xid} key={key}")
+
+            logger.warning("RM.recover: restored prepared txn xid=%s keys=%d", xid, len(keys))
+
+        logger.warning("RM.recover: done. prepared_in_mem=%d", len(self.prepared_txns))

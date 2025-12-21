@@ -4,6 +4,7 @@ from typing import Set, Dict
 import threading
 import requests
 import os
+import time
 
 # port = 9001
 app = FastAPI(title="Transaction Manager Service")
@@ -79,7 +80,7 @@ def commit_txn(req: TxnRequest):
 
     # ---------- Phase 2: commit ----------
     for rm in txn.rms:
-        _safe_commit(rm, xid)
+        _retry_commit(rm, xid)
 
     txn.state = "COMMITTED"
     return {"ok": True}
@@ -146,6 +147,22 @@ def _safe_commit(rm: str, xid: int):
         requests.post(f"{rm}/txn/commit", json={"xid": xid}, timeout=3)
     except Exception:
         pass   # 2PC 语义下：commit 阶段不回滚
+
+def _retry_commit(rm: str, xid: int, deadline=5.0, interval=0.5):
+    end = time.time() + deadline
+    while time.time() < end:
+        try:
+            resp = requests.post(
+                f"{rm}/txn/commit",
+                json={"xid": xid},
+                timeout=1,
+            )
+            if resp.status_code == 200:
+                return True
+        except Exception:
+            pass
+        time.sleep(interval)
+    return False
 
 
 def _safe_abort(rm: str, xid: int):
