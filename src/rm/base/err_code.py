@@ -10,6 +10,7 @@ class ErrCode(enum.Enum):
 
     TXN_NOT_FOUND = 20           # xid 未注册/已结束/不在本 RM 侧
     TXN_STATE_ERROR = 21         # 事务状态非法：重复 prepare/commit/abort，或顺序错误
+    INVALID_TX_STATE = 22        # 事务状态不允许此操作：如 commit 前未 prepare，prepare 后再 update 等
 
     # ---------- Concurrency / conflict (often retryable depending on policy) ----------
     TXN_CONFLICT = 30            # 总类：冲突（兼容您现有）

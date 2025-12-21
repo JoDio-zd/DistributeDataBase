@@ -37,6 +37,9 @@ class ResourceManager:
         self.locker = RowLockManager()
         self.read_set: dict[int, dict[str, int]] = {}
         self.write_set: dict[int, dict[str, int]] = {}
+        self.prepared_txns: set[int] = set()
+        self.committed_txns: set[int] = set()
+        self.aborted_txns: set[int] = set()
 
         logger.info(
             "ResourceManager initialized: table=%s, key=%s, index=%s, io=%s",
@@ -92,6 +95,11 @@ class ResourceManager:
         return None
 
     def read(self, xid: int, key):
+        if xid in self.prepared_txns or xid in self.committed_txns or xid in self.aborted_txns:
+            logger.warning(
+                "RM.update invalid state: xid=%s already prepared/committed/aborted", xid
+            )
+            return RMResult(ok=False, err=ErrCode.INVALID_TX_STATE)
         key = key.zfill(self.key_width)
         record = self._get_record(xid, key, for_write=False)
         if record is None or record.deleted:
@@ -106,6 +114,11 @@ class ResourceManager:
         return RMResult(ok=True, value=record)
 
     def insert(self, xid: int, record: dict) -> None:
+        if xid in self.prepared_txns or xid in self.committed_txns or xid in self.aborted_txns:
+            logger.warning(
+                "RM.update invalid state: xid=%s already prepared/committed/aborted", xid
+            )
+            return RMResult(ok=False, err=ErrCode.INVALID_TX_STATE)
         # For Insert operation, we assume the record contains the key field.
         key = record[self.key_field].zfill(self.key_width)
         if xid in self.read_set and key in self.read_set[xid]:
@@ -131,6 +144,11 @@ class ResourceManager:
         return RMResult(ok=True, value=record)
     
     def delete(self, xid: int, key) -> None:
+        if xid in self.prepared_txns or xid in self.committed_txns or xid in self.aborted_txns:
+            logger.warning(
+                "RM.update invalid state: xid=%s already prepared/committed/aborted", xid
+            )
+            return RMResult(ok=False, err=ErrCode.INVALID_TX_STATE)
         if xid in self.read_set and key in self.read_set[xid]:
             self.read_set[xid].pop(key)
         key = key.zfill(self.key_width)
@@ -147,6 +165,11 @@ class ResourceManager:
         return RMResult(ok=True, value=record)
 
     def update(self, xid: int, key: str, updates: dict) -> None:
+        if xid in self.prepared_txns or xid in self.committed_txns or xid in self.aborted_txns:
+            logger.warning(
+                "RM.update invalid state: xid=%s already prepared/committed/aborted", xid
+            )
+            return RMResult(ok=False, err=ErrCode.INVALID_TX_STATE)
         if xid in self.read_set and key in self.read_set[xid]:
             self.read_set[xid].pop(key)
         key = key.zfill(self.key_width)
@@ -168,8 +191,8 @@ class ResourceManager:
             record[field] = value
         record.version = xid
         if xid not in self.write_set:
-            self.read_set.setdefault(xid, {})
-            self.read_set[xid].setdefault(key, record.version)
+            self.write_set.setdefault(xid, {})
+            self.write_set[xid].setdefault(key, record.version)
         logger.info(
             "RM.update success: xid=%s key=%s start_version=%s",
             xid, key, self._get_start_version(xid, key)
@@ -182,6 +205,11 @@ class ResourceManager:
     # =========================================================
 
     def prepare(self, xid: int) -> bool:
+        if xid in self.aborted_txns:
+            logger.warning(
+                "RM.prepare invalid state: xid=%s already aborted", xid
+            )
+            return RMResult(ok=False, err=ErrCode.INVALID_TX_STATE)
         shadow = self.shadow_pool.get_records(xid)
         logger.info("RM.prepare start: xid=%s", xid)
         keys = sorted(k.zfill(self.key_width) for k in shadow.keys())
@@ -250,9 +278,18 @@ class ResourceManager:
             "RM.prepare success: xid=%s keys=%s",
             xid, list(shadow.keys())
         )
+        self.prepared_txns.add(xid)
         return RMResult(ok=True, value=None)
 
     def commit(self, xid: int) -> None:
+        if xid in self.committed_txns:
+            logger.info("RM.commit idem: xid=%s already committed", xid)
+            return RMResult(ok=True, value=None)
+        if xid not in self.prepared_txns:
+            logger.warning(
+                "RM.commit invalid state: xid=%s not prepared", xid
+            )
+            return RMResult(ok=False, err=ErrCode.INVALID_TX_STATE)
         shadow = self.shadow_pool.get_records(xid)
         logger.info(
             "RM.commit start: xid=%s records=%d",
@@ -282,6 +319,8 @@ class ResourceManager:
         self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)
         logger.info("RM.commit done: xid=%s", xid)
+        self.prepared_txns.discard(xid)
+        self.committed_txns.add(xid)
         return RMResult(ok=True, value=None)
 
     def abort(self, xid: int) -> None:
@@ -297,9 +336,13 @@ class ResourceManager:
             xid (int):
                 Transaction identifier.
         """
+        if xid in self.aborted_txns:
+            return RMResult(ok=True)
         self.shadow_pool.remove_txn(xid)
         self.txn_start_xid.pop(xid, None)
         self.locker.unlock_all(xid)
         logger.info("RM.abort: xid=%s", xid)
+        self.prepared_txns.discard(xid)
+        self.aborted_txns.add(xid)
 
         return RMResult(ok=True, value=None)
