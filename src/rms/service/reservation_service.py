@@ -183,4 +183,5 @@ def health():
 
 @app.post("/shutdown")
 def shutdown():
+    print("Shutting down Reservation RM Service...")
     os._exit(0)

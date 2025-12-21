@@ -137,4 +137,5 @@ def health():
 
 @app.post("/shutdown")
 def shutdown():
+    print("Shutting down Car RM Service...")
     os._exit(0)

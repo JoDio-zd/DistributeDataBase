@@ -136,5 +136,6 @@ def health():
 
 @app.post("/shutdown")
 def shutdown():
+    print("Shutting down Flight RM Service...")
     # 简单实现：直接退出进程
     os._exit(0)
